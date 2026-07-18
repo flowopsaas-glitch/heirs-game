@@ -52,7 +52,7 @@ function initEngine() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.8;
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.getElementById('game-container').prepend(renderer.domElement);
   
   // Camera — third person
@@ -1177,5 +1177,10 @@ function init() {
 }
 
 // Boot
-init();
+try {
+  init();
+} catch(e) {
+  console.error('HEIRS init failed:', e);
+  document.getElementById('loading').textContent = 'Error: ' + e.message;
+}
 
