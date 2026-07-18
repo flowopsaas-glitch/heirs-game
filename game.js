@@ -18,8 +18,8 @@ const PHASE = { TITLE:'TITLE', ROAMING:'ROAMING', DIALOGUE:'DIALOGUE', PLANNING:
 
 const Game = {
   phase: PHASE.TITLE, tick: 0,
-  worldTime: 21.75, timeSpeed: 0.0004, day: 1,
-  camera: { distance: 25, height: 18, angle: 0, targetAngle: 0 },
+  worldTime: 10.0, timeSpeed: 0.0004, day: 1,
+  camera: { distance: 20, height: 14, angle: 0, targetAngle: 0 },
   notifications: [], dialogueQueue: [], currentDialogue: null,
   missionAvailable: null, missionActive: false,
   aftermathTimer: 0, fallenMember: null
@@ -41,8 +41,8 @@ function initEngine() {
   
   // Scene
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0c14);
-  scene.fog = new THREE.FogExp2(0x080c18, 0.005);
+  scene.background = new THREE.Color(0x87ceeb);
+  scene.fog = new THREE.FogExp2(0x87ceeb, 0.003);
   
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -50,7 +50,7 @@ function initEngine() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = THREE.NoToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.outputEncoding = THREE.sRGBEncoding;
   document.getElementById('game-container').prepend(renderer.domElement);
@@ -73,15 +73,15 @@ function initEngine() {
 
 function setupLighting() {
   // Hemisphere light (sky/ground)
-  hemiLight = new THREE.HemisphereLight(0x4466aa, 0x222211, 0.5);
+  hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x444422, 0.7);
   scene.add(hemiLight);
   
   // Ambient
-  ambientLight = new THREE.AmbientLight(0x222244, 0.4);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
   
-  // Main directional (moon/sun)
-  sun = new THREE.DirectionalLight(0x6688cc, 0.4);
+  // Main directional (sun)
+  sun = new THREE.DirectionalLight(0xffffff, 1.2);
   sun.position.set(50, 80, 30);
   sun.castShadow = true;
   sun.shadow.mapSize.width = 2048;
@@ -112,26 +112,26 @@ const NPCMeshes = [];
 const Materials = {};
 
 function createMaterials() {
-  Materials.road = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, metalness: 0.1 });
-  Materials.sidewalk = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.85 });
-  Materials.concrete = new THREE.MeshStandardMaterial({ color: 0x3a3535, roughness: 0.7 });
-  Materials.glass = new THREE.MeshStandardMaterial({ color: 0x112244, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.6 });
-  Materials.metal = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.3, metalness: 0.8 });
-  Materials.brick = new THREE.MeshStandardMaterial({ color: 0x4a2a1a, roughness: 0.85 });
+  Materials.road = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9, metalness: 0.1 });
+  Materials.sidewalk = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.85 });
+  Materials.concrete = new THREE.MeshStandardMaterial({ color: 0x6a6055, roughness: 0.7 });
+  Materials.glass = new THREE.MeshStandardMaterial({ color: 0x446688, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.6 });
+  Materials.metal = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.3, metalness: 0.8 });
+  Materials.brick = new THREE.MeshStandardMaterial({ color: 0x8a5533, roughness: 0.85 });
   Materials.neon = new THREE.MeshBasicMaterial({ color: 0xff4400 });
   Materials.neonBlue = new THREE.MeshBasicMaterial({ color: 0x0066ff });
   Materials.neonGold = new THREE.MeshBasicMaterial({ color: 0xd4a843 });
-  Materials.car = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.2, metalness: 0.7 });
-  Materials.ground = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
-  Materials.water = new THREE.MeshStandardMaterial({ color: 0x0a2030, roughness: 0.1, metalness: 0.5, transparent: true, opacity: 0.7 });
+  Materials.car = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.2, metalness: 0.7 });
+  Materials.ground = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.95 });
+  Materials.water = new THREE.MeshStandardMaterial({ color: 0x1a4060, roughness: 0.1, metalness: 0.5, transparent: true, opacity: 0.7 });
 }
 
 // ─── District Definitions ────────────────────────────────────────────────────
 const Districts = [
-  { id:'narrows', name:'THE NARROWS', cx:0, cz:0, radius:50, buildingColor:0x3a3025, style:'old', controlledBy:'player' },
-  { id:'docks', name:'PORTO DOCKS', cx:80, cz:0, radius:50, buildingColor:0x252a30, style:'industrial', controlledBy:'voss' },
-  { id:'midtown', name:'MIDTOWN', cx:0, cz:-80, radius:50, buildingColor:0x2a2a35, style:'modern', controlledBy:'corsini' },
-  { id:'furnace', name:'THE FURNACE', cx:80, cz:-80, radius:50, buildingColor:0x2a1a1a, style:'ruined', controlledBy:null }
+  { id:'narrows', name:'THE NARROWS', cx:0, cz:0, radius:50, buildingColor:0x7a6550, style:'old', controlledBy:'player' },
+  { id:'docks', name:'PORTO DOCKS', cx:80, cz:0, radius:50, buildingColor:0x556070, style:'industrial', controlledBy:'voss' },
+  { id:'midtown', name:'MIDTOWN', cx:0, cz:-80, radius:50, buildingColor:0x606070, style:'modern', controlledBy:'corsini' },
+  { id:'furnace', name:'THE FURNACE', cx:80, cz:-80, radius:50, buildingColor:0x604030, style:'ruined', controlledBy:null }
 ];
 
 function generateCity() {
@@ -1094,21 +1094,18 @@ function updateWorldTime() {
 function updateLighting() {
   const t = Game.worldTime;
   if (t>=7&&t<17) { // Day
-    sun.intensity=1.0; sun.color.setHex(0xffeedd);
-    ambientLight.intensity=0.5; hemiLight.intensity=0.6;
-    scene.fog.density=0.003; scene.background.setHex(0x8899aa);
-    renderer.toneMappingExposure=1.2;
+    sun.intensity=1.2; sun.color.setHex(0xffffff);
+    ambientLight.intensity=0.6; hemiLight.intensity=0.7;
+    scene.fog.density=0.003; scene.background.setHex(0x87ceeb);
   } else if (t>=17&&t<21) { // Evening golden hour
     const prog=(t-17)/4;
-    sun.intensity=0.8-prog*0.4; sun.color.setHex(0xff8844);
-    ambientLight.intensity=0.4-prog*0.1; hemiLight.intensity=0.5-prog*0.2;
-    scene.fog.density=0.004; scene.background.setHex(0x1a1520);
-    renderer.toneMappingExposure=0.9-prog*0.2;
-  } else { // Night — visible but moody
-    sun.intensity=0.3; sun.color.setHex(0x6688cc);
-    ambientLight.intensity=0.35; hemiLight.intensity=0.3;
-    scene.fog.density=0.005; scene.background.setHex(0x080c18);
-    renderer.toneMappingExposure=0.7;
+    sun.intensity=1.0-prog*0.5; sun.color.setHex(0xff9955);
+    ambientLight.intensity=0.5-prog*0.15; hemiLight.intensity=0.6-prog*0.2;
+    scene.fog.density=0.004; scene.background.setHex(0x553322);
+  } else { // Night
+    sun.intensity=0.4; sun.color.setHex(0x6688cc);
+    ambientLight.intensity=0.4; hemiLight.intensity=0.35;
+    scene.fog.density=0.005; scene.background.setHex(0x0a1020);
   }
 }
 
