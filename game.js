@@ -52,7 +52,7 @@ function initEngine() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.8;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.outputEncoding = THREE.sRGBEncoding;
   document.getElementById('game-container').prepend(renderer.domElement);
   
   // Camera — third person
@@ -115,7 +115,7 @@ function createMaterials() {
   Materials.road = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, metalness: 0.1 });
   Materials.sidewalk = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.85 });
   Materials.concrete = new THREE.MeshStandardMaterial({ color: 0x3a3535, roughness: 0.7 });
-  Materials.glass = new THREE.MeshPhysicalMaterial({ color: 0x112244, roughness: 0.1, metalness: 0.9, transmission: 0.3, thickness: 0.5 });
+  Materials.glass = new THREE.MeshStandardMaterial({ color: 0x112244, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.6 });
   Materials.metal = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.3, metalness: 0.8 });
   Materials.brick = new THREE.MeshStandardMaterial({ color: 0x4a2a1a, roughness: 0.85 });
   Materials.neon = new THREE.MeshBasicMaterial({ color: 0xff4400 });
@@ -123,7 +123,7 @@ function createMaterials() {
   Materials.neonGold = new THREE.MeshBasicMaterial({ color: 0xd4a843 });
   Materials.car = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.2, metalness: 0.7 });
   Materials.ground = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95 });
-  Materials.water = new THREE.MeshPhysicalMaterial({ color: 0x0a2030, roughness: 0.1, metalness: 0.5, transmission: 0.6 });
+  Materials.water = new THREE.MeshStandardMaterial({ color: 0x0a2030, roughness: 0.1, metalness: 0.5, transparent: true, opacity: 0.7 });
 }
 
 // ─── District Definitions ────────────────────────────────────────────────────
@@ -498,7 +498,7 @@ function createCar(color) {
   
   // Cabin
   const cabinGeo = new THREE.BoxGeometry(1.7, 0.7, 2.2);
-  const cabinMat = new THREE.MeshPhysicalMaterial({ color: 0x112233, roughness: 0.1, metalness: 0.5, transmission: 0.4 });
+  const cabinMat = new THREE.MeshStandardMaterial({ color: 0x112233, roughness: 0.1, metalness: 0.5, transparent: true, opacity: 0.5 });
   const cabin = new THREE.Mesh(cabinGeo, cabinMat);
   cabin.position.set(0, 1.2, -0.3);
   group.add(cabin);
@@ -584,8 +584,8 @@ const Player = {
 function createPlayer() {
   playerGroup = new THREE.Group();
   
-  // Body
-  const bodyGeo = new THREE.CapsuleGeometry(0.35, 1.0, 8, 12);
+  // Body (cylinder + sphere for capsule shape - r128 compatible)
+  const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.0, 12);
   const bodyMat = new THREE.MeshStandardMaterial({
     color: 0x1a1a1a, roughness: 0.6, metalness: 0.2
   });
@@ -593,6 +593,16 @@ function createPlayer() {
   body.position.y = 1.0;
   body.castShadow = true;
   playerGroup.add(body);
+
+  // Body cap spheres
+  const capGeo = new THREE.SphereGeometry(0.35, 12, 8);
+  const capTop = new THREE.Mesh(capGeo, bodyMat);
+  capTop.position.y = 1.5;
+  capTop.castShadow = true;
+  playerGroup.add(capTop);
+  const capBottom = new THREE.Mesh(capGeo, bodyMat);
+  capBottom.position.y = 0.5;
+  playerGroup.add(capBottom);
   
   // Head
   const headGeo = new THREE.SphereGeometry(0.25, 12, 12);
@@ -604,11 +614,12 @@ function createPlayer() {
   head.castShadow = true;
   playerGroup.add(head);
   
-  // Hair
-  const hairGeo = new THREE.SphereGeometry(0.27, 12, 8, 0, Math.PI*2, 0, Math.PI/2);
+  // Hair (half-sphere using scale)
+  const hairGeo = new THREE.SphereGeometry(0.27, 12, 8);
   const hairMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
   const hair = new THREE.Mesh(hairGeo, hairMat);
-  hair.position.y = 1.9;
+  hair.position.y = 1.95;
+  hair.scale.y = 0.5;
   playerGroup.add(hair);
   
   // Leader ring
@@ -720,8 +731,8 @@ function createNPC3D(x, z, type, districtId, extra) {
   };
   const color = colors[type] || 0x555555;
   
-  // Body
-  const bodyGeo = new THREE.CapsuleGeometry(0.3, 0.9, 6, 10);
+  // Body (cylinder - r128 compatible)
+  const bodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.9, 10);
   const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.position.y = 0.9;
@@ -1148,6 +1159,22 @@ function gameLoop() {
 }
 
 function init() {
+  // Hide loading immediately - title screen is separate
+  document.getElementById('loading').style.display = 'none';
+  
+  // Set up title screen button FIRST (before any Three.js code)
+  document.querySelector('.start-btn').addEventListener('click', function() {
+    initAudio();
+    document.getElementById('title-screen').style.display = 'none';
+    Game.phase = PHASE.ROAMING;
+    sfxClick();
+    setTimeout(function(){notify('WASD to move. SHIFT to run.');},500);
+    setTimeout(function(){notify('E to interact with NPCs.');},2000);
+    setTimeout(function(){notify('Find OLD SANTO in The Narrows for your first job.');},4000);
+    setTimeout(function(){notify('The city is watching. The city remembers.','critical');},6500);
+  });
+  
+  // Now initialize 3D engine
   initEngine();
   createMaterials();
   generateCity();
@@ -1156,21 +1183,6 @@ function init() {
   spawnNPCs();
   updateCrewPanel();
   updateRepPanel();
-  
-  // Remove loading
-  document.getElementById('loading').style.display = 'none';
-  
-  // Title screen
-  document.querySelector('.start-btn').addEventListener('click', () => {
-    initAudio();
-    document.getElementById('title-screen').style.display = 'none';
-    Game.phase = PHASE.ROAMING;
-    sfxClick();
-    setTimeout(()=>notify('WASD to move. SHIFT to run.'),500);
-    setTimeout(()=>notify('E to interact with NPCs.'),2000);
-    setTimeout(()=>notify('Find OLD SANTO in The Narrows for your first job.'),4000);
-    setTimeout(()=>notify('The city is watching. The city remembers.','critical'),6500);
-  });
   
   // Start render loop
   gameLoop();
