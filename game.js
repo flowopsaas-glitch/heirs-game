@@ -42,7 +42,7 @@ function initEngine() {
   // Scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0c14);
-  scene.fog = new THREE.FogExp2(0x0a0c14, 0.008);
+  scene.fog = new THREE.FogExp2(0x080c18, 0.005);
   
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -51,7 +51,7 @@ function initEngine() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.8;
+  renderer.toneMappingExposure = 1.0;
   renderer.outputEncoding = THREE.sRGBEncoding;
   document.getElementById('game-container').prepend(renderer.domElement);
   
@@ -73,15 +73,15 @@ function initEngine() {
 
 function setupLighting() {
   // Hemisphere light (sky/ground)
-  hemiLight = new THREE.HemisphereLight(0x4466aa, 0x222211, 0.4);
+  hemiLight = new THREE.HemisphereLight(0x4466aa, 0x222211, 0.5);
   scene.add(hemiLight);
   
   // Ambient
-  ambientLight = new THREE.AmbientLight(0x111122, 0.3);
+  ambientLight = new THREE.AmbientLight(0x222244, 0.4);
   scene.add(ambientLight);
   
   // Main directional (moon/sun)
-  sun = new THREE.DirectionalLight(0xffeedd, 0.5);
+  sun = new THREE.DirectionalLight(0x6688cc, 0.4);
   sun.position.set(50, 80, 30);
   sun.castShadow = true;
   sun.shadow.mapSize.width = 2048;
@@ -458,7 +458,7 @@ function createStreetLight(x, z) {
   group.add(fix);
   
   // Point light
-  const light = new THREE.PointLight(0xffddaa, 0.6, 15, 2);
+  const light = new THREE.PointLight(0xffddaa, 1.5, 25, 2);
   light.position.set(1.5, 5.8, 0);
   light.castShadow = false; // Too many for shadow casting
   group.add(light);
@@ -1094,21 +1094,21 @@ function updateWorldTime() {
 function updateLighting() {
   const t = Game.worldTime;
   if (t>=7&&t<17) { // Day
-    sun.intensity=0.8; sun.color.setHex(0xffeedd);
-    ambientLight.intensity=0.4; hemiLight.intensity=0.5;
-    scene.fog.density=0.004; scene.background.setHex(0x8899aa);
-    renderer.toneMappingExposure=1.0;
+    sun.intensity=1.0; sun.color.setHex(0xffeedd);
+    ambientLight.intensity=0.5; hemiLight.intensity=0.6;
+    scene.fog.density=0.003; scene.background.setHex(0x8899aa);
+    renderer.toneMappingExposure=1.2;
   } else if (t>=17&&t<21) { // Evening golden hour
     const prog=(t-17)/4;
-    sun.intensity=0.6-prog*0.4; sun.color.setHex(0xff8844);
-    ambientLight.intensity=0.3-prog*0.15; hemiLight.intensity=0.4-prog*0.2;
-    scene.fog.density=0.006; scene.background.setHex(0x1a1520);
-    renderer.toneMappingExposure=0.8-prog*0.3;
-  } else { // Night
-    sun.intensity=0.1; sun.color.setHex(0x4466aa);
-    ambientLight.intensity=0.12; hemiLight.intensity=0.15;
-    scene.fog.density=0.01; scene.background.setHex(0x060810);
-    renderer.toneMappingExposure=0.5;
+    sun.intensity=0.8-prog*0.4; sun.color.setHex(0xff8844);
+    ambientLight.intensity=0.4-prog*0.1; hemiLight.intensity=0.5-prog*0.2;
+    scene.fog.density=0.004; scene.background.setHex(0x1a1520);
+    renderer.toneMappingExposure=0.9-prog*0.2;
+  } else { // Night — visible but moody
+    sun.intensity=0.3; sun.color.setHex(0x6688cc);
+    ambientLight.intensity=0.35; hemiLight.intensity=0.3;
+    scene.fog.density=0.005; scene.background.setHex(0x080c18);
+    renderer.toneMappingExposure=0.7;
   }
 }
 
