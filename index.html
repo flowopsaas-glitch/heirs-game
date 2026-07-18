@@ -3,209 +3,1681 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HEIRS — You Don't Play One Criminal. You Play A Family.</title>
+<title>HEIRS - Santo Porto</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-#game-container { width: 100%; height: 100%; position: relative; }
-canvas { width: 100%; height: 100%; display: block; }
-
-/* ═══════ HUD ═══════ */
-#hud { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
-#hud > * { pointer-events: auto; }
-
-#top-bar {
-  position: absolute; top: 0; left: 0; right: 0;
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 24px;
-  background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
-  color: #fff;
-}
-#district-name { font-size: 13px; text-transform: uppercase; letter-spacing: 4px; color: rgba(255,255,255,0.7); }
-#game-phase { font-size: 11px; padding: 5px 14px; border-radius: 3px; background: rgba(212,168,67,0.25); color: #d4a843; letter-spacing: 3px; text-transform: uppercase; }
-#world-time { font-size: 12px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
-
-#crew-panel { position: absolute; bottom: 20px; left: 20px; display: flex; gap: 8px; }
-.crew-card {
-  background: rgba(0,0,0,0.75); backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
-  padding: 10px 14px; min-width: 120px; transition: all 0.3s;
-}
-.crew-card.active { border-color: #d4a843; box-shadow: 0 0 20px rgba(212,168,67,0.2); }
-.crew-card.dead { opacity: 0.3; border-color: #500; }
-.crew-card .name { font-size: 11px; font-weight: 600; color: #fff; letter-spacing: 1px; }
-.crew-card .role { font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; }
-.crew-card .hp-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 6px; overflow: hidden; }
-.crew-card .hp-fill { height: 100%; background: linear-gradient(90deg, #4a8; #6c6); transition: width 0.5s; }
-
-#minimap-container {
-  position: absolute; bottom: 20px; right: 20px;
-  width: 180px; height: 180px;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
-  overflow: hidden;
-}
-#minimap-canvas { width: 100%; height: 100%; border-radius: 50%; }
-
-#rep-panel { position: absolute; top: 60px; right: 20px; }
-.rep-entry {
-  font-size: 10px; padding: 5px 12px; margin-bottom: 4px;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
-  border-radius: 4px; color: rgba(255,255,255,0.6);
-  display: flex; justify-content: space-between; gap: 20px;
-}
-.rep-value.pos { color: #6a6; } .rep-value.neg { color: #a44; }
-
-#notification-area { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); text-align: center; }
-.notification {
-  background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 6px;
-  padding: 10px 24px; margin-top: 6px; font-size: 12px; color: rgba(255,255,255,0.8);
-  animation: notifIn 0.4s ease;
-}
-.notification.critical { border-color: rgba(200,50,50,0.5); color: #e55; }
-.notification.success { border-color: rgba(50,200,80,0.5); color: #6c6; }
-@keyframes notifIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
-
-#interact-prompt {
-  position: absolute; bottom: 140px; left: 50%; transform: translateX(-50%);
-  font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 1px;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
-  padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15);
-  display: none;
-}
-
-/* Dialogue */
-#dialogue-box {
-  position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
-  width: 550px; max-width: 90%;
-  background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
-  padding: 20px 24px; display: none; z-index: 50;
-}
-#dialogue-box.active { display: block; }
-#dialogue-speaker { font-size: 11px; color: #d4a843; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 8px; }
-#dialogue-text { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.7; }
-#dialogue-continue { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 12px; text-align: right; }
-
-/* Planning overlay */
-#planning-overlay {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.92); backdrop-filter: blur(20px);
-  display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100;
-}
-#planning-overlay.active { display: flex; }
-#planning-title { font-size: 28px; color: #d4a843; letter-spacing: 8px; text-transform: uppercase; margin-bottom: 40px; font-weight: 300; }
-#planning-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; max-width: 900px; width: 90%; }
-.loadout-card {
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px; padding: 20px; transition: all 0.2s;
-}
-.loadout-card:hover { border-color: rgba(212,168,67,0.5); transform: translateY(-2px); }
-.loadout-card .member-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 12px; }
-.loadout-card select, .loadout-card input {
-  width: 100%; margin: 4px 0; padding: 8px 10px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.8); font-family: inherit; font-size: 11px; border-radius: 6px;
-}
-.loadout-card label { font-size: 9px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1px; }
-#lock-orders-btn {
-  margin-top: 40px; padding: 16px 50px;
-  background: linear-gradient(135deg, rgba(212,168,67,0.2), rgba(212,168,67,0.05));
-  border: 1px solid #d4a843; color: #d4a843; font-size: 13px; font-family: inherit;
-  text-transform: uppercase; letter-spacing: 5px; cursor: pointer; transition: all 0.3s; border-radius: 6px;
-}
-#lock-orders-btn:hover { background: rgba(212,168,67,0.3); transform: scale(1.03); }
-
-/* Succession */
-#succession-overlay {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.95); display: none; flex-direction: column;
-  align-items: center; justify-content: center; z-index: 200;
-}
-#succession-overlay.active { display: flex; }
-.fallen-name { font-size: 36px; color: #833; letter-spacing: 4px; margin-bottom: 12px; font-weight: 300; }
-.fallen-epitaph { font-size: 13px; color: rgba(255,255,255,0.3); margin-bottom: 50px; font-style: italic; }
-.successor-label { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 4px; margin-bottom: 8px; }
-.successor-name { font-size: 28px; color: #d4a843; letter-spacing: 3px; margin-bottom: 40px; font-weight: 300; }
-.continue-btn {
-  padding: 14px 36px; background: transparent; border: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.5); font-family: inherit; font-size: 12px;
-  text-transform: uppercase; letter-spacing: 3px; cursor: pointer; border-radius: 6px; transition: all 0.3s;
-}
-.continue-btn:hover { border-color: #d4a843; color: #d4a843; }
-
-/* Title screen */
+body { background: #0a0a0f; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
+canvas { display: block; }
 #title-screen {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(135deg, #0a0a0f 0%, #0f0a05 100%);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 300;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(180deg, #0a0a1a 0%, #1a0505 50%, #0a0a1a 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 1000; transition: opacity 1s ease-out;
 }
-#title-screen h1 { font-size: 80px; color: #d4a843; letter-spacing: 30px; font-weight: 200; margin-bottom: 20px; }
-#title-screen .subtitle { font-size: 13px; color: rgba(255,255,255,0.35); letter-spacing: 2px; margin-bottom: 60px; text-align: center; line-height: 2; }
-.start-btn {
-  padding: 16px 50px; background: transparent; border: 1px solid rgba(212,168,67,0.4);
-  color: #d4a843; font-family: inherit; font-size: 13px; text-transform: uppercase;
-  letter-spacing: 5px; cursor: pointer; transition: all 0.3s; border-radius: 6px;
+#title-screen.hidden { opacity: 0; pointer-events: none; }
+.title-glow {
+  font-size: 130px; color: #ff3333; font-family: Georgia, serif;
+  text-shadow: 0 0 20px #ff0000, 0 0 60px #aa0000, 0 0 100px #660000, 0 4px 8px rgba(0,0,0,0.8);
+  letter-spacing: 40px; margin-bottom: 10px; animation: pulse 3s ease-in-out infinite;
 }
-.start-btn:hover { background: rgba(212,168,67,0.1); border-color: #d4a843; }
-
-/* Loading */
-#loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: rgba(255,255,255,0.3); font-size: 12px; letter-spacing: 3px; z-index: 250; }
+@keyframes pulse { 0%,100%{text-shadow:0 0 20px #ff0000,0 0 60px #aa0000,0 0 100px #660000;} 50%{text-shadow:0 0 30px #ff2222,0 0 80px #cc0000,0 0 120px #880000;} }
+.subtitle { font-size: 16px; color: #554444; letter-spacing: 12px; margin-bottom: 50px; text-transform: uppercase; }
+.tagline { font-size: 12px; color: #443333; letter-spacing: 4px; margin-bottom: 40px; font-style: italic; }
+#begin-btn {
+  padding: 16px 70px; font-size: 18px; background: transparent;
+  border: 1px solid #ff3333; color: #ff3333; cursor: pointer;
+  letter-spacing: 8px; transition: all 0.4s; font-family: 'Courier New', monospace;
+}
+#begin-btn:hover { background: #ff3333; color: #0a0a0f; box-shadow: 0 0 40px rgba(255,50,50,0.5); transform: scale(1.05); }
+#top-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 36px;
+  background: rgba(0,0,0,0.9); display: none; align-items: center;
+  padding: 0 20px; border-bottom: 1px solid rgba(255,255,255,0.1); z-index: 50;
+}
+#top-bar.visible { display: flex; }
+.bar-item { flex: 1; font-size: 11px; letter-spacing: 2px; }
+#district-name { color: #ff8844; }
+#game-phase { color: #888; text-align: center; text-transform: uppercase; }
+#game-time { color: #6688cc; text-align: right; }
 </style>
 </head>
 <body>
-<div id="game-container">
-  <div id="loading">LOADING SANTO PORTO...</div>
-  
-  <div id="hud">
-    <div id="top-bar">
-      <div id="district-name">THE NARROWS</div>
-      <div id="game-phase">ROAMING</div>
-      <div id="world-time">Day 1 — 21:45 — NIGHT</div>
-    </div>
-    
-    <div id="crew-panel"></div>
-    
-    <div id="minimap-container"><canvas id="minimap-canvas" width="180" height="180"></canvas></div>
-    <div id="rep-panel"></div>
-    
-    <div id="interact-prompt">[E] Talk</div>
-    <div id="notification-area"></div>
-    
-    <div id="dialogue-box">
-      <div id="dialogue-speaker"></div>
-      <div id="dialogue-text"></div>
-      <div id="dialogue-continue">[ SPACE to continue ]</div>
-    </div>
-  </div>
-  
-  <div id="planning-overlay">
-    <div id="planning-title">LOCK IN ORDERS</div>
-    <div id="planning-grid"></div>
-    <button id="lock-orders-btn">COMMIT — NO TURNING BACK</button>
-  </div>
-  
-  <div id="succession-overlay">
-    <div class="fallen-name"></div>
-    <div class="fallen-epitaph"></div>
-    <div class="successor-label">CONTROL PASSES TO</div>
-    <div class="successor-name"></div>
-    <button class="continue-btn">CARRY THE NAME FORWARD</button>
-  </div>
-  
-  <div id="title-screen">
-    <h1>HEIRS</h1>
-    <div class="subtitle">
-      You don't play one criminal in this city.<br>
-      You play a family.<br><br>
-      Every job might cost you the one you were controlling.
-    </div>
-    <button class="start-btn">BEGIN</button>
-  </div>
+<div id="title-screen">
+  <div class="title-glow">HEIRS</div>
+  <div class="subtitle">Santo Porto</div>
+  <div class="tagline">Blood remembers. The city never forgets.</div>
+  <button id="begin-btn">BEGIN</button>
 </div>
+<canvas id="game-canvas"></canvas>
+<div id="top-bar">
+  <div class="bar-item" id="district-name">THE NARROWS</div>
+  <div class="bar-item" id="game-phase">ROAMING</div>
+  <div class="bar-item" id="game-time">06:00</div>
+</div>
+<script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="game.js"></script>
-</body>
+// ═══════════════════════════════════════════════════════════
+// HEIRS — Santo Porto — Complete Game Engine
+// ═══════════════════════════════════════════════════════════
+
+'use strict';
+
+// ─── CANVAS & CONTEXT ─────────────────────────────────────
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+// ─── CONSTANTS ────────────────────────────────────────────
+const WORLD_W = 3200, WORLD_H = 2400;
+const WEAPONS = ['Pistol','Shotgun','Knife','Bat','SMG'];
+const STANCES = ['Aggressive','Defensive','Flanking','Support'];
+const WEAPON_STATS = { Pistol:{dmg:15,acc:0.8}, Shotgun:{dmg:28,acc:0.6}, Knife:{dmg:22,acc:0.9}, Bat:{dmg:12,acc:0.95}, SMG:{dmg:18,acc:0.7} };
+
+// ─── GAME STATE ───────────────────────────────────────────
+const G = {
+  phase: 'title',
+  time: 6.0,
+  daySpeed: 0.0004,
+  cam: { x: 0, y: 0 },
+  keys: {},
+  particles: [],
+  notes: [],
+  missionActive: false,
+  missionTarget: null,
+  missionsDone: 0,
+  cityMemory: [],
+  factions: {
+    narrows: { name:'The Narrows', rep:80, color:'#44ff66' },
+    docks: { name:'Porto Docks (Voss)', rep:30, color:'#4488ff' },
+    midtown: { name:'Midtown (Corsini)', rep:30, color:'#ff44cc' },
+    furnace: { name:'The Furnace', rep:50, color:'#ffaa44' }
+  }
+};
+
+// ─── DISTRICTS ────────────────────────────────────────────
+const DISTRICTS = [
+  { name:'The Narrows', x:0, y:0, w:1600, h:1200, color:'#151f15', faction:'narrows' },
+  { name:'Porto Docks', x:1600, y:0, w:1600, h:1200, color:'#151520', faction:'docks' },
+  { name:'Midtown', x:0, y:1200, w:1600, h:1200, color:'#1f1520', faction:'midtown' },
+  { name:'The Furnace', x:1600, y:1200, w:1600, h:1200, color:'#1f1f10', faction:'furnace' }
+];
+
+// ─── CREW ─────────────────────────────────────────────────
+let crew = [
+  { name:'Mace', role:'Leader', hp:100, maxHp:100, weapon:'Pistol', stance:'Aggressive', color:'#ff4444', alive:true },
+  { name:'Juno', role:'Enforcer', hp:90, maxHp:90, weapon:'Shotgun', stance:'Defensive', color:'#44aaff', alive:true },
+  { name:'Trick', role:'Scout', hp:75, maxHp:75, weapon:'Knife', stance:'Flanking', color:'#44ff88', alive:true },
+  { name:'Nova', role:'Medic', hp:65, maxHp:65, weapon:'Pistol', stance:'Support', color:'#ffaa44', alive:true }
+];
+let leaderIdx = 0;
+
+// ─── PLAYER ───────────────────────────────────────────────
+const player = { x:400, y:350, speed:2.2, runMult:2.0, facing:'down', moving:false, running:false, anim:0, animT:0 };
+
+
+// ─── WORLD GENERATION ─────────────────────────────────────
+const roads = [], buildings = [], cars = [], streetlights = [], npcs = [];
+
+function genWorld() {
+  genRoads(); genBuildings(); genCars(); genLights(); genNPCs();
+}
+
+function genRoads() {
+  for (let y = 200; y < WORLD_H; y += 280) roads.push({x:0,y,w:WORLD_W,h:28,dir:'h'});
+  for (let x = 300; x < WORLD_W; x += 380) roads.push({x,y:0,w:28,h:WORLD_H,dir:'v'});
+}
+
+function genBuildings() {
+  const colors = ['#2a2a3a','#3a2a2a','#2a3a3a','#33303d','#3a3040','#2d3333','#383028'];
+  for (let d = 0; d < DISTRICTS.length; d++) {
+    const dist = DISTRICTS[d];
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const bw = 50 + Math.random()*110;
+      const bh = 50 + Math.random()*80;
+      const bx = dist.x + 35 + Math.random()*(dist.w - bw - 70);
+      const by = dist.y + 35 + Math.random()*(dist.h - bh - 70);
+      // Check road overlap
+      let onRoad = false;
+      for (const r of roads) {
+        if (bx < r.x+r.w+8 && bx+bw > r.x-8 && by < r.y+r.h+8 && by+bh > r.y-8) { onRoad=true; break; }
+      }
+      if (onRoad) continue;
+      // Check building overlap
+      let overlap = false;
+      for (const b of buildings) {
+        if (bx < b.x+b.w+15 && bx+bw+15 > b.x && by < b.y+b.h+15 && by+bh+15 > b.y) { overlap=true; break; }
+      }
+      if (overlap) continue;
+      const floors = 2 + Math.floor(Math.random()*5);
+      const b = {
+        x:bx, y:by, w:bw, h:bh, floors,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        windows: [], hasNeon: Math.random()<0.25,
+        neonColor: ['#ff0044','#00ffaa','#ffaa00','#aa44ff','#44ffff'][Math.floor(Math.random()*5)],
+        neonText: ['BAR','GUNS','PAWN','EATS','CLUB','24HR','MOTEL','LOANS'][Math.floor(Math.random()*8)]
+      };
+      // Windows
+      const cols = Math.floor(b.w/18), rows = Math.floor(b.h/16);
+      for (let r=0;r<rows;r++) for (let c=0;c<cols;c++) {
+        if (Math.random()<0.55) b.windows.push({
+          rx:6+c*16, ry:6+r*14, lit:Math.random()<0.35,
+          litColor:['#ffdd44','#44aaff','#ff8844','#ffffff','#aaffaa'][Math.floor(Math.random()*5)]
+        });
+      }
+      buildings.push(b);
+    }
+  }
+}
+
+function genCars() {
+  const colors = ['#882222','#224488','#181818','#666666','#445566','#884422','#228844','#666622'];
+  for (const road of roads) {
+    const len = road.dir==='h' ? road.w : road.h;
+    const count = Math.floor(len / 180);
+    for (let i = 0; i < count; i++) {
+      if (Math.random() > 0.45) continue;
+      const horiz = road.dir === 'h';
+      const cx = horiz ? road.x + i*180 + Math.random()*80 : road.x + (Math.random()>0.5?-22:road.w+4);
+      const cy = horiz ? road.y + (Math.random()>0.5?-20:road.h+3) : road.y + i*180 + Math.random()*80;
+      cars.push({ x:cx, y:cy, w:horiz?38:18, h:horiz?18:38, color:colors[Math.floor(Math.random()*colors.length)], horiz });
+    }
+  }
+}
+
+function genLights() {
+  for (const road of roads) {
+    const len = road.dir==='h' ? road.w : road.h;
+    const step = 140;
+    for (let i = step; i < len; i += step) {
+      if (Math.random() > 0.7) continue;
+      const lx = road.dir==='h' ? road.x+i : road.x+road.w+6;
+      const ly = road.dir==='h' ? road.y-6 : road.y+i;
+      streetlights.push({x:lx, y:ly});
+    }
+  }
+}
+
+function genNPCs() {
+  const names = ['Rico','Sal','Vince','Marco','Tony','Ray','Eddie','Lou','Pete','Max','Gino','Dex','Kane','Rook','Blaze',
+    'Milo','Gio','Enzo','Dante','Luca','Niko','Vic','Carla','Rosa','Tina','Vera','Suki','Jade','Lena','Kai'];
+  function rName() { return names[Math.floor(Math.random()*names.length)]; }
+  for (let d = 0; d < DISTRICTS.length; d++) {
+    const dist = DISTRICTS[d];
+    const type = d===0?'civilian':d===1?'voss':d===2?'corsini':'neutral';
+    for (let i = 0; i < 15; i++) {
+      let nx, ny, valid = false;
+      for (let t=0;t<20;t++) {
+        nx = dist.x + 50 + Math.random()*(dist.w-100);
+        ny = dist.y + 50 + Math.random()*(dist.h-100);
+        let ok = true;
+        for (const b of buildings) { if (nx>b.x-5&&nx<b.x+b.w+5&&ny>b.y-5&&ny<b.y+b.h+5){ok=false;break;} }
+        if (ok){valid=true;break;}
+      }
+      if (!valid) { nx=dist.x+100; ny=dist.y+100; }
+      npcs.push({
+        x:nx, y:ny, type, tx:nx, ty:ny,
+        speed:0.25+Math.random()*0.35, moveT:Math.random()*300,
+        witnessed:[], name:rName(),
+        color: type==='voss'?'#5599ff':type==='corsini'?'#ff55cc':type==='neutral'?'#ddaa44':'#999999'
+      });
+    }
+  }
+  // OLD SANTO - mission giver
+  npcs.push({
+    x:380, y:280, type:'mission', tx:380, ty:280, speed:0, moveT:9999,
+    witnessed:[], name:'Old Santo', color:'#ffd700', isMission:true,
+    dialogues:[
+      "You Mace's crew? Good. I got work that needs doing.",
+      "The Voss gang runs the docks like their private kingdom. Time to remind them who built this city.",
+      "Hit their counting house on Pier 7. Take your crew, plan the hit, commit to it. No half-measures.",
+      "Once you lock in your plan, that's it. No changing your mind when bullets fly. That's the code of the Heirs."
+    ]
+  });
+}
+
+
+// ─── INPUT ────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  G.keys[e.code] = true;
+  if (e.code === 'Space') { e.preventDefault(); onSpace(); }
+  if (e.code === 'Escape') onEscape();
+  if (e.code === 'KeyE') onInteract();
+  if (e.code === 'Enter' && G.phase === 'title') startGame();
+});
+window.addEventListener('keyup', e => { G.keys[e.code] = false; });
+canvas.addEventListener('click', e => { if (G.phase==='planning') onPlanClick(e.clientX, e.clientY); });
+
+// ─── DIALOGUE ─────────────────────────────────────────────
+const DLG = { active:false, npc:null, idx:0, text:'', typing:0, full:'' };
+
+function openDlg(npc) {
+  if (!npc.dialogues) return;
+  DLG.active = true; DLG.npc = npc; DLG.idx = 0;
+  DLG.full = npc.dialogues[0]; DLG.text = ''; DLG.typing = 0;
+  G.phase = 'dialogue';
+  setPhase('DIALOGUE');
+}
+
+function advDlg() {
+  if (DLG.typing < DLG.full.length) { DLG.text = DLG.full; DLG.typing = DLG.full.length; return; }
+  DLG.idx++;
+  if (DLG.idx >= DLG.npc.dialogues.length) {
+    closeDlg();
+    if (DLG.npc && DLG.npc.isMission && !G.missionActive) {
+      G.missionActive = true;
+      G.missionTarget = { x:1900, y:450, name:'Voss Counting House' };
+      notify('MISSION: Assault the Voss Counting House at Porto Docks');
+      notify('Head east to the docks. Press [E] at the target.');
+    }
+    return;
+  }
+  DLG.full = DLG.npc.dialogues[DLG.idx]; DLG.text = ''; DLG.typing = 0;
+}
+
+function closeDlg() { DLG.active = false; G.phase = 'roaming'; setPhase('ROAMING'); }
+
+// ─── PLANNING ─────────────────────────────────────────────
+const PLAN = { active:false, sel:0, commitBtn:{x:0,y:0,w:0,h:0}, btns:[] };
+
+function openPlan() { PLAN.active = true; PLAN.sel = 0; G.phase = 'planning'; setPhase('PLANNING'); }
+function closePlan() { PLAN.active = false; G.phase = 'roaming'; setPhase('ROAMING'); }
+
+function onPlanClick(mx, my) {
+  const b = PLAN.commitBtn;
+  if (mx>=b.x&&mx<=b.x+b.w&&my>=b.y&&my<=b.y+b.h) { commitPlan(); return; }
+  for (const btn of PLAN.btns) {
+    if (mx>=btn.x&&mx<=btn.x+btn.w&&my>=btn.y&&my<=btn.y+btn.h) { btn.action(); return; }
+  }
+}
+
+function commitPlan() { PLAN.active=false; G.phase='combat'; setPhase('COMBAT'); startCombat(); }
+
+// ─── COMBAT ───────────────────────────────────────────────
+const COMBAT = { active:false, enemies:[], log:[], done:false, tick:0, phase:0 };
+
+function startCombat() {
+  COMBAT.active = true; COMBAT.log = []; COMBAT.done = false; COMBAT.tick = 0; COMBAT.phase = 0;
+  const diff = 1 + G.missionsDone * 0.3;
+  COMBAT.enemies = [
+    { name:'Voss Thug', hp:50*diff, maxHp:50*diff, weapon:'Pistol', stance:'Aggressive', alive:true },
+    { name:'Voss Guard', hp:70*diff, maxHp:70*diff, weapon:'Shotgun', stance:'Defensive', alive:true },
+    { name:'Voss Captain', hp:60*diff, maxHp:60*diff, weapon:'SMG', stance:'Flanking', alive:true }
+  ];
+  COMBAT.enemies.forEach(e => { e.hp=Math.round(e.hp); e.maxHp=Math.round(e.maxHp); });
+  COMBAT.log.push('═══ COMBAT ENGAGED ═══');
+  resolveCombat();
+}
+
+function resolveCombat() {
+  for (let round = 1; round <= 6; round++) {
+    if (COMBAT.enemies.every(e=>!e.alive) || crew.every(c=>!c.alive)) break;
+    COMBAT.log.push(`── Round ${round} ──`);
+    // Crew attacks
+    for (const m of crew) {
+      if (!m.alive) continue;
+      const targets = COMBAT.enemies.filter(e=>e.alive);
+      if (!targets.length) break;
+      const t = targets[Math.floor(Math.random()*targets.length)];
+      const ws = WEAPON_STATS[m.weapon]||{dmg:10,acc:0.7};
+      let dmg = ws.dmg + Math.floor(Math.random()*8)-3;
+      if (m.stance==='Aggressive') dmg = Math.floor(dmg*1.4);
+      if (m.stance==='Flanking') dmg = Math.floor(dmg*1.2);
+      const hit = Math.random() < ws.acc;
+      if (hit) {
+        t.hp -= dmg;
+        COMBAT.log.push(`  ${m.name} → ${t.name} for ${dmg} dmg [${m.weapon}]`);
+        if (t.hp<=0) { t.alive=false; t.hp=0; COMBAT.log.push(`    ★ ${t.name} ELIMINATED`);
+          G.cityMemory.push({killer:m.name,victim:t.name,time:G.time});
+          npcs.filter(n=>n.type==='voss').forEach(n=>n.witnessed.push({killer:m.name,victim:t.name}));
+        }
+      } else { COMBAT.log.push(`  ${m.name} → ${t.name} MISSED`); }
+    }
+    // Enemy attacks
+    for (const e of COMBAT.enemies) {
+      if (!e.alive) continue;
+      const targets = crew.filter(c=>c.alive);
+      if (!targets.length) break;
+      const t = targets[Math.floor(Math.random()*targets.length)];
+      let dmg = (WEAPON_STATS[e.weapon]||{dmg:12}).dmg + Math.floor(Math.random()*6)-2;
+      if (t.stance==='Defensive') dmg = Math.floor(dmg*0.5);
+      else if (t.stance==='Support') dmg = Math.floor(dmg*0.7);
+      dmg = Math.max(1, dmg);
+      const hit = Math.random() < 0.7;
+      if (hit) {
+        t.hp -= dmg;
+        COMBAT.log.push(`  ${e.name} → ${t.name} for ${dmg} dmg`);
+        if (t.hp<=0) { t.alive=false; t.hp=0; COMBAT.log.push(`    ✖ ${t.name} DOWN!`);
+          if (crew.indexOf(t)===leaderIdx) COMBAT.log.push('    ⚠ LEADER HAS FALLEN ⚠');
+        }
+      } else { COMBAT.log.push(`  ${e.name} → ${t.name} MISSED`); }
+    }
+    // Medic heal
+    const medic = crew.find(c=>c.alive&&c.stance==='Support');
+    if (medic) {
+      const wounded = crew.filter(c=>c.alive&&c.hp<c.maxHp);
+      if (wounded.length) {
+        const t = wounded[Math.floor(Math.random()*wounded.length)];
+        const heal = 8 + Math.floor(Math.random()*8);
+        t.hp = Math.min(t.maxHp, t.hp+heal);
+        COMBAT.log.push(`  ${medic.name} heals ${t.name} +${heal}`);
+      }
+    }
+  }
+  COMBAT.done = true;
+  const victory = COMBAT.enemies.every(e=>!e.alive);
+  COMBAT.log.push(victory ? '═══ VICTORY ═══' : '═══ RETREAT ═══');
+  if (victory) {
+    G.factions.docks.rep = Math.max(0, G.factions.docks.rep-15);
+    G.factions.narrows.rep = Math.min(100, G.factions.narrows.rep+8);
+    G.missionsDone++;
+    notify('Voss reputation decreased. The Narrows grows stronger.');
+  }
+  if (!crew[leaderIdx].alive) setTimeout(triggerSuccession, 1500);
+}
+
+
+// ─── SUCCESSION ───────────────────────────────────────────
+const SUCC = { active:false, heir:null };
+
+function triggerSuccession() {
+  const heir = crew.find((c,i) => c.alive && i !== leaderIdx);
+  if (!heir) { gameOver(); return; }
+  SUCC.active = true; SUCC.heir = heir;
+  G.phase = 'succession'; setPhase('SUCCESSION');
+}
+
+function acceptSuccession() {
+  leaderIdx = crew.indexOf(SUCC.heir);
+  crew[leaderIdx].role = 'Leader';
+  SUCC.active = false; COMBAT.active = false;
+  G.phase = 'roaming'; G.missionActive = false;
+  setPhase('ROAMING');
+  notify(SUCC.heir.name + ' rises as the new leader.');
+  crew.filter(c=>c.alive).forEach(c=>{ c.hp=Math.min(c.maxHp, c.hp+25); });
+}
+
+function gameOver() {
+  G.phase = 'title';
+  document.getElementById('title-screen').classList.remove('hidden');
+  document.getElementById('top-bar').classList.remove('visible');
+  notify('ALL HEIRS HAVE FALLEN. GAME OVER.');
+  // Reset crew
+  crew = [
+    { name:'Mace', role:'Leader', hp:100, maxHp:100, weapon:'Pistol', stance:'Aggressive', color:'#ff4444', alive:true },
+    { name:'Juno', role:'Enforcer', hp:90, maxHp:90, weapon:'Shotgun', stance:'Defensive', color:'#44aaff', alive:true },
+    { name:'Trick', role:'Scout', hp:75, maxHp:75, weapon:'Knife', stance:'Flanking', color:'#44ff88', alive:true },
+    { name:'Nova', role:'Medic', hp:65, maxHp:65, weapon:'Pistol', stance:'Support', color:'#ffaa44', alive:true }
+  ];
+  leaderIdx = 0; G.missionsDone = 0; G.missionActive = false; G.cityMemory = [];
+}
+
+// ─── INPUT HANDLERS ───────────────────────────────────────
+function onSpace() {
+  if (G.phase==='dialogue') advDlg();
+  else if (G.phase==='combat' && COMBAT.done && !SUCC.active) {
+    if (!crew[leaderIdx].alive) return;
+    COMBAT.active = false; G.phase='roaming'; G.missionActive=false; setPhase('ROAMING');
+    notify('Return to Old Santo for the next job.');
+  }
+  else if (G.phase==='succession') acceptSuccession();
+}
+
+function onEscape() {
+  if (G.phase==='dialogue') closeDlg();
+  if (G.phase==='planning') closePlan();
+}
+
+function onInteract() {
+  if (G.phase!=='roaming') return;
+  for (const npc of npcs) {
+    const d = dist(player.x, player.y, npc.x, npc.y);
+    if (d < 50 && npc.isMission) { openDlg(npc); return; }
+  }
+  if (G.missionActive && G.missionTarget) {
+    const d = dist(player.x, player.y, G.missionTarget.x, G.missionTarget.y);
+    if (d < 60) openPlan();
+  }
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────
+function notify(text) { G.notes.push({text, t:350, a:1}); }
+function setPhase(t) { document.getElementById('game-phase').textContent = t; }
+
+// ─── HELPERS ──────────────────────────────────────────────
+function dist(x1,y1,x2,y2) { return Math.sqrt((x2-x1)**2+(y2-y1)**2); }
+function lerp(a,b,t) { return a+(b-a)*t; }
+function clamp(v,lo,hi) { return Math.max(lo,Math.min(hi,v)); }
+function lighten(hex,n) { const c=parseInt(hex.slice(1),16); return '#'+[16,8,0].map(s=>Math.min(255,(c>>s&0xFF)+n).toString(16).padStart(2,'0')).join(''); }
+function darken(hex,n) { const c=parseInt(hex.slice(1),16); return '#'+[16,8,0].map(s=>Math.max(0,(c>>s&0xFF)-n).toString(16).padStart(2,'0')).join(''); }
+function nightFactor() {
+  const t=G.time;
+  if (t>=7&&t<=17) return 0;
+  if (t>=5&&t<7) return 1-(t-5)/2;
+  if (t>17&&t<=19) return (t-17)/2;
+  return 1;
+}
+
+
+// ─── UPDATE ───────────────────────────────────────────────
+function update() {
+  if (G.phase==='title') return;
+
+  // Time
+  G.time += G.daySpeed;
+  if (G.time >= 24) G.time -= 24;
+  const h = Math.floor(G.time), m = Math.floor((G.time%1)*60);
+  document.getElementById('game-time').textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+
+  // Player movement
+  if (G.phase==='roaming') {
+    const run = G.keys['ShiftLeft']||G.keys['ShiftRight'];
+    const spd = player.speed * (run ? player.runMult : 1);
+    player.running = run; player.moving = false;
+    let dx=0, dy=0;
+    if (G.keys['KeyW']||G.keys['ArrowUp']) { dy=-1; player.facing='up'; }
+    if (G.keys['KeyS']||G.keys['ArrowDown']) { dy=1; player.facing='down'; }
+    if (G.keys['KeyA']||G.keys['ArrowLeft']) { dx=-1; player.facing='left'; }
+    if (G.keys['KeyD']||G.keys['ArrowRight']) { dx=1; player.facing='right'; }
+    if (dx||dy) {
+      player.moving = true;
+      const len = Math.sqrt(dx*dx+dy*dy);
+      const nx = player.x + (dx/len)*spd;
+      const ny = player.y + (dy/len)*spd;
+      let blocked = false;
+      for (const b of buildings) {
+        if (nx>b.x-10&&nx<b.x+b.w+10&&ny>b.y-10&&ny<b.y+b.h+10) { blocked=true; break; }
+      }
+      if (!blocked) { player.x=clamp(nx,15,WORLD_W-15); player.y=clamp(ny,15,WORLD_H-15); }
+    }
+    player.animT++;
+    if (player.animT>6) { player.animT=0; player.anim=(player.anim+1)%4; }
+  }
+
+  // Camera
+  const tx = player.x - W/2, ty = player.y - H/2;
+  G.cam.x = lerp(G.cam.x, tx, 0.06);
+  G.cam.y = lerp(G.cam.y, ty, 0.06);
+
+  // District display
+  for (const d of DISTRICTS) {
+    if (player.x>=d.x&&player.x<d.x+d.w&&player.y>=d.y&&player.y<d.y+d.h)
+      document.getElementById('district-name').textContent = d.name.toUpperCase();
+  }
+
+  // NPC movement
+  for (const npc of npcs) {
+    if (npc.speed===0) continue;
+    npc.moveT--;
+    if (npc.moveT<=0) {
+      npc.tx = npc.x + (Math.random()-0.5)*250;
+      npc.ty = npc.y + (Math.random()-0.5)*250;
+      npc.tx = clamp(npc.tx, 20, WORLD_W-20);
+      npc.ty = clamp(npc.ty, 20, WORLD_H-20);
+      npc.moveT = 120+Math.random()*200;
+    }
+    const dx=npc.tx-npc.x, dy=npc.ty-npc.y, d=Math.sqrt(dx*dx+dy*dy);
+    if (d>3) { npc.x+=dx/d*npc.speed; npc.y+=dy/d*npc.speed; }
+  }
+
+  // Dialogue typing
+  if (DLG.active && DLG.typing < DLG.full.length) {
+    DLG.typing += 0.6;
+    DLG.text = DLG.full.substring(0, Math.floor(DLG.typing));
+  }
+
+  // Particles
+  const nf = nightFactor();
+  if (Math.random()<0.4) {
+    const type = nf > 0.4 ? 'rain' : 'dust';
+    G.particles.push({
+      x: G.cam.x + Math.random()*W, y: G.cam.y - 5,
+      vx: type==='rain'? -0.5 : (Math.random()-0.5)*0.3,
+      vy: type==='rain'? 2+Math.random()*2 : 0.2+Math.random()*0.5,
+      life: 150+Math.random()*100, maxLife: 250, size: type==='rain'?1:1+Math.random()*2, type
+    });
+  }
+  for (let i=G.particles.length-1;i>=0;i--) {
+    const p=G.particles[i]; p.x+=p.vx; p.y+=p.vy; p.life--;
+    if (p.life<=0) G.particles.splice(i,1);
+  }
+
+  // Notifications
+  for (let i=G.notes.length-1;i>=0;i--) {
+    G.notes[i].t--;
+    if (G.notes[i].t<80) G.notes[i].a = G.notes[i].t/80;
+    if (G.notes[i].t<=0) G.notes.splice(i,1);
+  }
+
+  // Combat tick
+  if (COMBAT.active) COMBAT.tick++;
+}
+
+
+// ─── RENDER ───────────────────────────────────────────────
+function render() {
+  const nf = nightFactor();
+
+  // Sky
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  if (nf < 0.1) { sky.addColorStop(0,'#5599dd'); sky.addColorStop(1,'#aaccee'); }
+  else if (nf < 0.5) { sky.addColorStop(0,'#cc5533'); sky.addColorStop(1,'#553344'); }
+  else { sky.addColorStop(0,'#080818'); sky.addColorStop(1,'#101030'); }
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(Math.round(-G.cam.x), Math.round(-G.cam.y));
+
+  // Ground / Districts
+  for (const d of DISTRICTS) {
+    const g = ctx.createRadialGradient(d.x+d.w/2,d.y+d.h/2,100,d.x+d.w/2,d.y+d.h/2,d.w*0.6);
+    g.addColorStop(0, lighten(d.color,12)); g.addColorStop(1, d.color);
+    ctx.fillStyle = g; ctx.fillRect(d.x,d.y,d.w,d.h);
+    // Grid pattern
+    ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.lineWidth = 1;
+    for (let gx=d.x;gx<d.x+d.w;gx+=60) { ctx.beginPath(); ctx.moveTo(gx,d.y); ctx.lineTo(gx,d.y+d.h); ctx.stroke(); }
+    for (let gy=d.y;gy<d.y+d.h;gy+=60) { ctx.beginPath(); ctx.moveTo(d.x,gy); ctx.lineTo(d.x+d.w,gy); ctx.stroke(); }
+  }
+  // District borders
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 3;
+  for (const d of DISTRICTS) ctx.strokeRect(d.x,d.y,d.w,d.h);
+
+  // Roads
+  for (const r of roads) {
+    ctx.fillStyle = '#1a1a22'; ctx.fillRect(r.x,r.y,r.w,r.h);
+    // Sidewalk edges
+    ctx.fillStyle = '#2a2a30';
+    if (r.dir==='h') { ctx.fillRect(r.x,r.y-3,r.w,3); ctx.fillRect(r.x,r.y+r.h,r.w,3); }
+    else { ctx.fillRect(r.x-3,r.y,3,r.h); ctx.fillRect(r.x+r.w,r.y,3,r.h); }
+    // Center line
+    ctx.strokeStyle = '#555520'; ctx.lineWidth = 1; ctx.setLineDash([12,18]);
+    ctx.beginPath();
+    if (r.dir==='h') { ctx.moveTo(r.x,r.y+r.h/2); ctx.lineTo(r.x+r.w,r.y+r.h/2); }
+    else { ctx.moveTo(r.x+r.w/2,r.y); ctx.lineTo(r.x+r.w/2,r.y+r.h); }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Cars
+  for (const car of cars) {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(car.x+3, car.y+3, car.w, car.h);
+    // Body
+    ctx.fillStyle = car.color;
+    roundRect(ctx, car.x, car.y, car.w, car.h, 3); ctx.fill();
+    // Roof
+    ctx.fillStyle = darken(car.color, 20);
+    if (car.horiz) ctx.fillRect(car.x+8,car.y+3,car.w-16,car.h-6);
+    else ctx.fillRect(car.x+3,car.y+8,car.w-6,car.h-16);
+    // Windshield
+    ctx.fillStyle = 'rgba(80,120,180,0.6)';
+    if (car.horiz) ctx.fillRect(car.x+car.w*0.65,car.y+2,car.w*0.2,car.h-4);
+    else ctx.fillRect(car.x+2,car.y+5,car.w-4,car.h*0.2);
+    // Headlights at night
+    if (nf > 0.3 && Math.random()>0.7) {
+      ctx.fillStyle = 'rgba(255,240,150,0.3)';
+      ctx.beginPath(); ctx.arc(car.horiz?car.x+car.w:car.x+car.w/2, car.horiz?car.y+car.h/2:car.y, 4, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Streetlights
+  if (nf > 0.1) {
+    for (const sl of streetlights) {
+      ctx.fillStyle = '#555'; ctx.fillRect(sl.x-1,sl.y,2,12);
+      ctx.fillStyle = `rgba(255,220,100,${nf*0.15})`;
+      ctx.beginPath(); ctx.arc(sl.x, sl.y, 35*nf, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = `rgba(255,240,180,${nf*0.9})`;
+      ctx.beginPath(); ctx.arc(sl.x, sl.y, 3, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Buildings (sorted by y for depth)
+  const sortedB = [...buildings].sort((a,b) => a.y - b.y);
+  for (const b of sortedB) {
+    const depth = b.floors * 4;
+    // Shadow
+    ctx.fillStyle = `rgba(0,0,0,${0.25+nf*0.35})`;
+    ctx.fillRect(b.x+depth+4, b.y+depth+4, b.w, b.h);
+    // 3D sides (isometric depth)
+    ctx.fillStyle = darken(b.color, 40);
+    ctx.beginPath();
+    ctx.moveTo(b.x+b.w, b.y); ctx.lineTo(b.x+b.w+depth, b.y-depth);
+    ctx.lineTo(b.x+b.w+depth, b.y+b.h-depth); ctx.lineTo(b.x+b.w, b.y+b.h);
+    ctx.fill();
+    ctx.fillStyle = darken(b.color, 25);
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y); ctx.lineTo(b.x+depth, b.y-depth);
+    ctx.lineTo(b.x+b.w+depth, b.y-depth); ctx.lineTo(b.x+b.w, b.y);
+    ctx.fill();
+    // Main face
+    const bg = ctx.createLinearGradient(b.x,b.y,b.x,b.y+b.h);
+    bg.addColorStop(0, lighten(b.color, 8)); bg.addColorStop(1, darken(b.color, 15));
+    ctx.fillStyle = bg; ctx.fillRect(b.x, b.y, b.w, b.h);
+    // Outline
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1; ctx.strokeRect(b.x,b.y,b.w,b.h);
+    // Windows
+    for (const win of b.windows) {
+      const wx = b.x+win.rx, wy = b.y+win.ry;
+      if (nf>0.2 && win.lit) {
+        ctx.fillStyle = win.litColor;
+        ctx.globalAlpha = 0.6 + Math.sin(Date.now()*0.001+win.rx*0.1)*0.25;
+        ctx.fillRect(wx, wy, 9, 7);
+        // Glow
+        ctx.shadowColor = win.litColor; ctx.shadowBlur = 6;
+        ctx.fillRect(wx, wy, 9, 7);
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = nf>0.2 ? '#0a0a12' : 'rgba(80,120,160,0.25)';
+        ctx.fillRect(wx, wy, 9, 7);
+        // Window frame
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.strokeRect(wx,wy,9,7);
+      }
+    }
+    // Neon sign
+    if (b.hasNeon) {
+      const glow = nf > 0.15 ? 1 : 0.3;
+      ctx.font = 'bold 11px monospace';
+      ctx.fillStyle = b.neonColor;
+      ctx.shadowColor = b.neonColor;
+      ctx.shadowBlur = (10+Math.sin(Date.now()*0.004)*5) * glow;
+      ctx.globalAlpha = (0.7+Math.sin(Date.now()*0.003)*0.3) * glow;
+      ctx.fillText(b.neonText, b.x+b.w/2-15, b.y-8);
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    }
+  }
+
+
+  // NPCs
+  for (const npc of npcs) {
+    const sx = npc.x - G.cam.x, sy = npc.y - G.cam.y;
+    if (sx < -60 || sx > W+60 || sy < -60 || sy > H+60) continue; // cull
+    drawSprite(npc.x, npc.y, npc.color, false, 0);
+    // Mission giver marker
+    if (npc.isMission) {
+      const bob = Math.sin(Date.now()*0.004)*4;
+      ctx.fillStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 12+Math.sin(Date.now()*0.005)*5;
+      ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('!', npc.x, npc.y - 34 + bob);
+      ctx.shadowBlur = 0; ctx.textAlign = 'left';
+      // Name
+      ctx.fillStyle = '#ffd700'; ctx.font = '9px monospace'; ctx.textAlign='center';
+      ctx.fillText(npc.name, npc.x, npc.y - 24); ctx.textAlign = 'left';
+    }
+  }
+
+  // Mission target
+  if (G.missionActive && G.missionTarget) {
+    const mt = G.missionTarget;
+    const pulse = Math.sin(Date.now()*0.004)*6;
+    // Outer ring
+    ctx.strokeStyle = '#ff3333'; ctx.lineWidth = 2;
+    ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 15;
+    ctx.beginPath(); ctx.arc(mt.x, mt.y, 35+pulse, 0, Math.PI*2); ctx.stroke();
+    // Inner X
+    ctx.beginPath(); ctx.moveTo(mt.x-10,mt.y-10); ctx.lineTo(mt.x+10,mt.y+10);
+    ctx.moveTo(mt.x+10,mt.y-10); ctx.lineTo(mt.x-10,mt.y+10); ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Label
+    ctx.fillStyle = '#ff4444'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('TARGET: '+mt.name, mt.x, mt.y-48); ctx.textAlign = 'left';
+    // Direction arrow from player
+    const ang = Math.atan2(mt.y-player.y, mt.x-player.x);
+    const arrowDist = Math.min(80, dist(player.x,player.y,mt.x,mt.y)*0.3);
+    if (dist(player.x,player.y,mt.x,mt.y) > 150) {
+      const ax = player.x + Math.cos(ang)*arrowDist;
+      const ay = player.y + Math.sin(ang)*arrowDist;
+      ctx.fillStyle = 'rgba(255,50,50,0.6)';
+      ctx.beginPath(); ctx.arc(ax, ay, 4, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Player crew (followers behind)
+  const offsets = [[0,0],[-24,14],[24,14],[0,28]];
+  for (let i=crew.length-1; i>=0; i--) {
+    if (!crew[i].alive || i===leaderIdx) continue;
+    drawSprite(player.x+offsets[i][0], player.y+offsets[i][1], crew[i].color, false, 0);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '7px monospace'; ctx.textAlign='center';
+    ctx.fillText(crew[i].name, player.x+offsets[i][0], player.y+offsets[i][1]-20); ctx.textAlign='left';
+  }
+  // Player (leader)
+  drawSprite(player.x, player.y, crew[leaderIdx].color, true, player.anim);
+  // Leader name + indicator
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 9px monospace'; ctx.textAlign='center';
+  ctx.fillText(crew[leaderIdx].name, player.x, player.y-22);
+  ctx.fillStyle = '#ffd700'; ctx.font = '8px monospace';
+  ctx.fillText('★', player.x, player.y-30); ctx.textAlign='left';
+  // Player ground circle
+  ctx.strokeStyle = crew[leaderIdx].color; ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.5+Math.sin(Date.now()*0.003)*0.2;
+  ctx.beginPath(); ctx.ellipse(player.x, player.y+14, 10, 5, 0, 0, Math.PI*2); ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Particles
+  for (const p of G.particles) {
+    const a = p.life/p.maxLife;
+    if (p.type==='rain') {
+      ctx.strokeStyle = `rgba(140,170,220,${a*0.5})`;
+      ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+p.vx*4,p.y+p.vy*4); ctx.stroke();
+    } else {
+      ctx.fillStyle = `rgba(180,160,120,${a*0.4})`;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  ctx.restore();
+
+  // Post-processing overlays
+  // Night
+  if (nf > 0) {
+    ctx.fillStyle = `rgba(5,5,25,${nf*0.45})`;
+    ctx.fillRect(0,0,W,H);
+  }
+  // Vignette
+  const vig = ctx.createRadialGradient(W/2,H/2,W*0.25,W/2,H/2,W*0.75);
+  vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,0.5)');
+  ctx.fillStyle = vig; ctx.fillRect(0,0,W,H);
+  // Subtle scanlines
+  ctx.fillStyle = 'rgba(0,0,0,0.03)';
+  for (let y=0;y<H;y+=3) ctx.fillRect(0,y,W,1);
+
+  // ── UI ──
+  drawCrewPanel();
+  drawRepPanel();
+  drawMinimap();
+  drawNotifications();
+  if (DLG.active) drawDialogueUI();
+  if (PLAN.active) drawPlanningUI();
+  if (COMBAT.active) drawCombatUI();
+  if (SUCC.active) drawSuccessionUI();
+  drawPrompts();
+}
+
+
+// ─── SPRITE DRAWING ───────────────────────────────────────
+function drawSprite(x, y, color, isPlayer, frame) {
+  const walk = isPlayer && player.moving ? Math.sin(frame*Math.PI/2)*3 : 0;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(x, y+15, 7, 4, 0, 0, Math.PI*2); ctx.fill();
+  // Legs
+  ctx.fillStyle = darken(color, 50);
+  ctx.fillRect(x-4, y+4, 3, 9+walk);
+  ctx.fillRect(x+1, y+4, 3, 9-walk);
+  // Body
+  ctx.fillStyle = color;
+  ctx.fillRect(x-6, y-7, 12, 14);
+  // Jacket detail
+  ctx.fillStyle = darken(color, 20);
+  ctx.fillRect(x-1, y-7, 2, 14);
+  // Arms
+  ctx.fillStyle = darken(color, 15);
+  const armSwing = isPlayer && player.moving ? Math.sin(frame*Math.PI/2)*2 : 0;
+  ctx.fillRect(x-8, y-5+armSwing, 3, 10);
+  ctx.fillRect(x+5, y-5-armSwing, 3, 10);
+  // Head
+  ctx.fillStyle = '#ddb088';
+  ctx.beginPath(); ctx.arc(x, y-12, 6, 0, Math.PI*2); ctx.fill();
+  // Hair
+  ctx.fillStyle = darken(color, 40);
+  ctx.beginPath(); ctx.arc(x, y-14, 5, Math.PI, Math.PI*2); ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x-3, y-13, 2, 2);
+  ctx.fillRect(x+1, y-13, 2, 2);
+  // Player glow
+  if (isPlayer) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1;
+    ctx.shadowColor = color; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.ellipse(x, y+15, 11, 5, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+}
+
+// ─── UI: CREW PANEL ───────────────────────────────────────
+function drawCrewPanel() {
+  const px=10, py=H-180, pw=210, ph=170;
+  ctx.fillStyle = 'rgba(0,0,0,0.88)'; roundRect(ctx,px,py,pw,ph,4); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth=1; roundRect(ctx,px,py,pw,ph,4); ctx.stroke();
+  ctx.fillStyle = '#777'; ctx.font = 'bold 9px monospace'; ctx.fillText('CREW',px+8,py+14);
+
+  for (let i=0;i<crew.length;i++) {
+    const c=crew[i], cy=py+22+i*36;
+    ctx.fillStyle = c.alive?c.color:'#333'; ctx.font='bold 10px monospace';
+    ctx.fillText(c.name, px+8, cy+10);
+    ctx.fillStyle = c.alive?'#666':'#222'; ctx.font='9px monospace';
+    ctx.fillText(c.role, px+55, cy+10);
+    if (i===leaderIdx&&c.alive) { ctx.fillStyle='#ffd700'; ctx.fillText('★',px+pw-18,cy+10); }
+    if (!c.alive) { ctx.fillStyle='#ff2222'; ctx.font='8px monospace'; ctx.fillText('DEAD',px+140,cy+10); continue; }
+    // HP bar
+    const bx=px+8, by=cy+14, bw=pw-24, bh=5;
+    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(bx,by,bw,bh);
+    const ratio = c.hp/c.maxHp;
+    ctx.fillStyle = ratio>0.6?'#33cc55':ratio>0.3?'#ccaa22':'#cc3322';
+    ctx.fillRect(bx,by,bw*ratio,bh);
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.strokeRect(bx,by,bw,bh);
+    ctx.fillStyle='#888'; ctx.font='7px monospace'; ctx.fillText(c.hp+'/'+c.maxHp,bx+bw-30,by+4);
+    // Weapon indicator
+    ctx.fillStyle='#555'; ctx.font='7px monospace'; ctx.fillText(c.weapon+'/'+c.stance.charAt(0),bx,cy+26);
+  }
+}
+
+// ─── UI: REPUTATION ───────────────────────────────────────
+function drawRepPanel() {
+  const px=W-185, py=46, pw=175, ph=105;
+  ctx.fillStyle = 'rgba(0,0,0,0.88)'; roundRect(ctx,px,py,pw,ph,4); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; roundRect(ctx,px,py,pw,ph,4); ctx.stroke();
+  ctx.fillStyle='#777'; ctx.font='bold 9px monospace'; ctx.fillText('FACTIONS',px+8,py+13);
+  let i=0;
+  for (const k of Object.keys(G.factions)) {
+    const f=G.factions[k], fy=py+20+i*21;
+    ctx.fillStyle=f.color; ctx.font='8px monospace'; ctx.fillText(f.name,px+8,fy+9);
+    ctx.fillStyle='#111'; ctx.fillRect(px+8,fy+12,100,3);
+    ctx.fillStyle=f.color; ctx.fillRect(px+8,fy+12,f.rep,3);
+    i++;
+  }
+}
+
+// ─── UI: MINIMAP ──────────────────────────────────────────
+function drawMinimap() {
+  const mw=140, mh=105, mx=W-mw-10, my=H-mh-10;
+  const sx=WORLD_W/mw, sy=WORLD_H/mh;
+  ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillRect(mx,my,mw,mh);
+  ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.strokeRect(mx,my,mw,mh);
+  for (const d of DISTRICTS) { ctx.fillStyle=d.color; ctx.globalAlpha=0.6; ctx.fillRect(mx+d.x/sx,my+d.y/sy,d.w/sx,d.h/sy); }
+  ctx.globalAlpha=1;
+  // Player
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(mx+player.x/sx,my+player.y/sy,3,0,Math.PI*2); ctx.fill();
+  // Old Santo
+  ctx.fillStyle='#ffd700'; ctx.beginPath(); ctx.arc(mx+380/sx,my+280/sy,2,0,Math.PI*2); ctx.fill();
+  // Mission target
+  if (G.missionTarget) { ctx.fillStyle='#ff3333'; ctx.beginPath(); ctx.arc(mx+G.missionTarget.x/sx,my+G.missionTarget.y/sy,2,0,Math.PI*2); ctx.fill(); }
+  // Labels
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='6px monospace';
+  ctx.fillText('N',mx+5,my+10); ctx.fillText('D',mx+mw/2+5,my+10);
+  ctx.fillText('M',mx+5,my+mh/2+10); ctx.fillText('F',mx+mw/2+5,my+mh/2+10);
+}
+
+
+// ─── UI: NOTIFICATIONS ────────────────────────────────────
+function drawNotifications() {
+  for (let i=0;i<G.notes.length;i++) {
+    const n=G.notes[i];
+    ctx.globalAlpha=n.a;
+    ctx.fillStyle='rgba(0,0,0,0.85)';
+    const nw=Math.min(500, ctx.measureText(n.text).width+40);
+    roundRect(ctx, W/2-nw/2, 50+i*38, nw, 30, 3); ctx.fill();
+    ctx.strokeStyle='#cc6600'; ctx.lineWidth=1; roundRect(ctx, W/2-nw/2, 50+i*38, nw, 30, 3); ctx.stroke();
+    ctx.fillStyle='#ffcc66'; ctx.font='11px monospace'; ctx.textAlign='center';
+    ctx.fillText(n.text, W/2, 70+i*38); ctx.textAlign='left';
+    ctx.globalAlpha=1;
+  }
+}
+
+// ─── UI: DIALOGUE ─────────────────────────────────────────
+function drawDialogueUI() {
+  const dw=Math.min(650, W-40), dh=140;
+  const dx=(W-dw)/2, dy=H-dh-40;
+  ctx.fillStyle='rgba(8,8,18,0.96)'; roundRect(ctx,dx,dy,dw,dh,6); ctx.fill();
+  ctx.strokeStyle='#ffd700'; ctx.lineWidth=2; roundRect(ctx,dx,dy,dw,dh,6); ctx.stroke();
+  // Portrait area
+  ctx.fillStyle='rgba(255,215,0,0.1)'; ctx.fillRect(dx+10,dy+10,50,50);
+  ctx.strokeStyle='#ffd700'; ctx.strokeRect(dx+10,dy+10,50,50);
+  ctx.fillStyle='#ffd700'; ctx.font='bold 28px serif'; ctx.textAlign='center';
+  ctx.fillText('!',dx+35,dy+44); ctx.textAlign='left';
+  // Name
+  ctx.fillStyle='#ffd700'; ctx.font='bold 13px monospace';
+  ctx.fillText(DLG.npc?DLG.npc.name:'', dx+75, dy+28);
+  // Text
+  ctx.fillStyle='#ccc'; ctx.font='12px monospace';
+  wrapText(DLG.text, dx+75, dy+50, dw-95, 16);
+  // Prompt
+  ctx.fillStyle='#555'; ctx.font='10px monospace';
+  ctx.fillText('[SPACE] Continue    [ESC] Close', dx+75, dy+dh-15);
+  // Progress dots
+  if (DLG.npc && DLG.npc.dialogues) {
+    for (let i=0;i<DLG.npc.dialogues.length;i++) {
+      ctx.fillStyle = i<=DLG.idx?'#ffd700':'#333';
+      ctx.beginPath(); ctx.arc(dx+dw-20-i*12,dy+dh-15,3,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+// ─── UI: PLANNING ─────────────────────────────────────────
+function drawPlanningUI() {
+  const pw=Math.min(720,W-40), ph=Math.min(480,H-60);
+  const px=(W-pw)/2, py=(H-ph)/2;
+  PLAN.btns = [];
+
+  ctx.fillStyle='rgba(5,5,15,0.98)'; roundRect(ctx,px,py,pw,ph,8); ctx.fill();
+  ctx.strokeStyle='#ff3333'; ctx.lineWidth=2; roundRect(ctx,px,py,pw,ph,8); ctx.stroke();
+  // Title
+  ctx.fillStyle='#ff3333'; ctx.font='bold 20px monospace'; ctx.textAlign='center';
+  ctx.fillText('OPERATION PLANNING',W/2,py+35); 
+  ctx.fillStyle='#666'; ctx.font='10px monospace';
+  ctx.fillText('Lock in weapons & stances. Once committed, NO mid-fight changes.',W/2,py+52);
+  ctx.textAlign='left';
+
+  // Members
+  const aliveCrew = crew.filter(c=>c.alive);
+  for (let i=0;i<aliveCrew.length;i++) {
+    const c=aliveCrew[i];
+    const my=py+70+i*88, mw=pw-40;
+    ctx.fillStyle='rgba(20,20,30,0.9)'; ctx.fillRect(px+20,my,mw,78);
+    ctx.strokeStyle='#333'; ctx.strokeRect(px+20,my,mw,78);
+    // Color bar
+    ctx.fillStyle=c.color; ctx.fillRect(px+20,my,4,78);
+    // Name & role
+    ctx.fillStyle=c.color; ctx.font='bold 13px monospace'; ctx.fillText(c.name,px+35,my+20);
+    ctx.fillStyle='#888'; ctx.font='10px monospace'; ctx.fillText(c.role,px+100,my+20);
+    ctx.fillStyle='#555'; ctx.fillText('HP: '+c.hp+'/'+c.maxHp,px+180,my+20);
+    // Weapon
+    ctx.fillStyle='#aaa'; ctx.font='11px monospace'; ctx.fillText('Weapon:',px+35,my+45);
+    ctx.fillStyle='#ffcc44'; ctx.font='bold 12px monospace'; ctx.fillText(c.weapon,px+110,my+45);
+    // Weapon buttons
+    addPlanBtn(px+200,my+33,28,18,'<',()=>{ const idx=WEAPONS.indexOf(c.weapon); c.weapon=WEAPONS[(idx-1+WEAPONS.length)%WEAPONS.length]; });
+    addPlanBtn(px+232,my+33,28,18,'>',()=>{ const idx=WEAPONS.indexOf(c.weapon); c.weapon=WEAPONS[(idx+1)%WEAPONS.length]; });
+    // Stance
+    ctx.fillStyle='#aaa'; ctx.font='11px monospace'; ctx.fillText('Stance:',px+300,my+45);
+    ctx.fillStyle='#44ccff'; ctx.font='bold 12px monospace'; ctx.fillText(c.stance,px+375,my+45);
+    addPlanBtn(px+490,my+33,28,18,'<',()=>{ const idx=STANCES.indexOf(c.stance); c.stance=STANCES[(idx-1+STANCES.length)%STANCES.length]; });
+    addPlanBtn(px+522,my+33,28,18,'>',()=>{ const idx=STANCES.indexOf(c.stance); c.stance=STANCES[(idx+1)%STANCES.length]; });
+    // Stats hint
+    const ws=WEAPON_STATS[c.weapon];
+    ctx.fillStyle='#444'; ctx.font='9px monospace';
+    ctx.fillText(`DMG:${ws.dmg} ACC:${Math.round(ws.acc*100)}%`,px+35,my+65);
+    const stanceDesc = {Aggressive:'1.4x dmg, more exposed',Defensive:'Take 50% less dmg',Flanking:'1.2x dmg, dodge bonus',Support:'Heal allies each round'};
+    ctx.fillText(stanceDesc[c.stance]||'',px+200,my+65);
+  }
+
+  // COMMIT
+  const bw=180, bh=42, bx=W/2-bw/2, by=py+ph-60;
+  PLAN.commitBtn = {x:bx,y:by,w:bw,h:bh};
+  ctx.fillStyle='#cc2222'; roundRect(ctx,bx,by,bw,bh,4); ctx.fill();
+  ctx.strokeStyle='#ff4444'; roundRect(ctx,bx,by,bw,bh,4); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 16px monospace'; ctx.textAlign='center';
+  ctx.fillText('⚔ COMMIT',W/2,by+28); ctx.textAlign='left';
+  // ESC hint
+  ctx.fillStyle='#444'; ctx.font='9px monospace'; ctx.textAlign='center';
+  ctx.fillText('[ESC] Cancel',W/2,py+ph-10); ctx.textAlign='left';
+}
+
+function addPlanBtn(x,y,w,h,text,action) {
+  ctx.fillStyle='#252530'; ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle='#555'; ctx.strokeRect(x,y,w,h);
+  ctx.fillStyle='#ddd'; ctx.font='bold 12px monospace'; ctx.textAlign='center';
+  ctx.fillText(text,x+w/2,y+h/2+4); ctx.textAlign='left';
+  PLAN.btns.push({x,y,w,h,action});
+}
+
+
+// ─── UI: COMBAT ───────────────────────────────────────────
+function drawCombatUI() {
+  const cw=Math.min(680,W-30), ch=Math.min(520,H-40);
+  const cx=(W-cw)/2, cy=(H-ch)/2;
+  ctx.fillStyle='rgba(10,2,2,0.98)'; roundRect(ctx,cx,cy,cw,ch,8); ctx.fill();
+  ctx.strokeStyle='#ff2222'; ctx.lineWidth=2; roundRect(ctx,cx,cy,cw,ch,8); ctx.stroke();
+  // Red accent line
+  ctx.fillStyle='#ff2222'; ctx.fillRect(cx,cy,cw,3);
+
+  ctx.fillStyle='#ff4444'; ctx.font='bold 18px monospace'; ctx.textAlign='center';
+  ctx.fillText('⚔ COMBAT RESOLUTION ⚔',W/2,cy+28); ctx.textAlign='left';
+
+  // Your crew
+  ctx.fillStyle='#44cc66'; ctx.font='bold 10px monospace'; ctx.fillText('YOUR CREW',cx+15,cy+50);
+  for (let i=0;i<crew.length;i++) {
+    const c=crew[i], ry=cy+58+i*15;
+    ctx.fillStyle=c.alive?c.color:'#333'; ctx.font='9px monospace';
+    ctx.fillText(`${c.name} [${c.weapon}/${c.stance[0]}] ${c.hp}/${c.maxHp}${c.alive?'':' ✖'}`,cx+15,ry+10);
+  }
+
+  // Enemies
+  ctx.fillStyle='#cc4444'; ctx.font='bold 10px monospace'; ctx.fillText('ENEMIES',cx+cw/2+10,cy+50);
+  for (let i=0;i<COMBAT.enemies.length;i++) {
+    const e=COMBAT.enemies[i], ry=cy+58+i*15;
+    ctx.fillStyle=e.alive?'#ff6666':'#333'; ctx.font='9px monospace';
+    ctx.fillText(`${e.name} [${e.weapon}] ${Math.round(e.hp)}/${Math.round(e.maxHp)}${e.alive?'':' ✖'}`,cx+cw/2+10,ry+10);
+  }
+
+  // Combat log
+  const logY=cy+130, logH=ch-190;
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(cx+10,logY,cw-20,logH);
+  ctx.strokeStyle='#331111'; ctx.strokeRect(cx+10,logY,cw-20,logH);
+  
+  const visLines = Math.min(COMBAT.log.length, Math.floor(COMBAT.tick/8));
+  ctx.font='9px monospace';
+  const maxShow = Math.floor(logH/13);
+  const start = Math.max(0, visLines-maxShow);
+  for (let i=start;i<visLines;i++) {
+    const line=COMBAT.log[i], ly=logY+13+(i-start)*13;
+    if (ly>logY+logH-5) break;
+    ctx.fillStyle = line.includes('ELIMINATED')||line.includes('VICTORY')?'#44ff44':
+                    line.includes('DOWN')||line.includes('FALLEN')?'#ff4444':
+                    line.includes('═══')?'#ffcc44':
+                    line.includes('──')?'#666':'#aaa';
+    ctx.fillText(line,cx+20,ly);
+  }
+
+  // Result
+  if (COMBAT.done && visLines>=COMBAT.log.length) {
+    const won = COMBAT.enemies.every(e=>!e.alive);
+    ctx.fillStyle=won?'#44ff44':'#ff4444';
+    ctx.font='bold 16px monospace'; ctx.textAlign='center';
+    ctx.fillText(won?'★ VICTORY ★':'RETREAT - LICK YOUR WOUNDS',W/2,cy+ch-40);
+    if (crew[leaderIdx].alive) {
+      ctx.fillStyle='#666'; ctx.font='11px monospace';
+      ctx.fillText('[SPACE] Continue',W/2,cy+ch-18);
+    }
+    ctx.textAlign='left';
+  }
+}
+
+// ─── UI: SUCCESSION ───────────────────────────────────────
+function drawSuccessionUI() {
+  const sw=450, sh=280, sx=(W-sw)/2, sy=(H-sh)/2;
+  ctx.fillStyle='rgba(0,0,0,0.98)'; roundRect(ctx,sx,sy,sw,sh,8); ctx.fill();
+  ctx.strokeStyle='#ffd700'; ctx.lineWidth=3; roundRect(ctx,sx,sy,sw,sh,8); ctx.stroke();
+  ctx.fillStyle='#ffd700'; ctx.fillRect(sx,sy,sw,4);
+
+  ctx.fillStyle='#ff3333'; ctx.font='bold 20px monospace'; ctx.textAlign='center';
+  ctx.fillText('LEADER FALLEN',W/2,sy+40);
+  ctx.fillStyle='#888'; ctx.font='12px monospace';
+  ctx.fillText(crew[leaderIdx].name+' has been killed.',W/2,sy+70);
+  
+  if (SUCC.heir) {
+    ctx.fillStyle='#ffd700'; ctx.font='bold 14px monospace';
+    ctx.fillText('SUCCESSION',W/2,sy+110);
+    ctx.fillStyle='#fff'; ctx.font='13px monospace';
+    ctx.fillText('The heir rises:',W/2,sy+135);
+    // New leader
+    ctx.fillStyle=SUCC.heir.color; ctx.font='bold 24px monospace';
+    ctx.fillText(SUCC.heir.name,W/2,sy+175);
+    ctx.fillStyle='#888'; ctx.font='11px monospace';
+    ctx.fillText('Previous role: '+SUCC.heir.role,W/2,sy+200);
+    ctx.fillText('Now takes command of the crew.',W/2,sy+220);
+    ctx.fillStyle='#ffd700'; ctx.font='bold 12px monospace';
+    ctx.fillText('[SPACE] Accept the Mantle',W/2,sy+260);
+  }
+  ctx.textAlign='left';
+}
+
+// ─── UI: INTERACTION PROMPTS ──────────────────────────────
+function drawPrompts() {
+  if (G.phase!=='roaming') return;
+  // NPC proximity
+  let nearNPC = null;
+  for (const npc of npcs) { if (dist(player.x,player.y,npc.x,npc.y)<50) { nearNPC=npc; break; } }
+  if (nearNPC) {
+    const pw=190, ph=28, px=W/2-pw/2, py=H-80;
+    ctx.fillStyle='rgba(0,0,0,0.85)'; roundRect(ctx,px,py,pw,ph,3); ctx.fill();
+    ctx.strokeStyle='#ffd700'; roundRect(ctx,px,py,pw,ph,3); ctx.stroke();
+    ctx.fillStyle='#ffd700'; ctx.font='11px monospace'; ctx.textAlign='center';
+    ctx.fillText('[E] Talk to '+nearNPC.name,W/2,py+18); ctx.textAlign='left';
+  }
+  // Mission target proximity
+  if (G.missionActive && G.missionTarget && dist(player.x,player.y,G.missionTarget.x,G.missionTarget.y)<60) {
+    const pw=200, ph=28, px=W/2-pw/2, py=H-80;
+    ctx.fillStyle='rgba(0,0,0,0.85)'; roundRect(ctx,px,py,pw,ph,3); ctx.fill();
+    ctx.strokeStyle='#ff3333'; roundRect(ctx,px,py,pw,ph,3); ctx.stroke();
+    ctx.fillStyle='#ff3333'; ctx.font='11px monospace'; ctx.textAlign='center';
+    ctx.fillText('[E] Begin Operation',W/2,py+18); ctx.textAlign='left';
+  }
+  // Controls hint
+  ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='9px monospace';
+  ctx.fillText('WASD Move | SHIFT Run | E Interact | ESC Close',12,H-8);
+}
+
+
+// ─── UTILITY DRAWING ──────────────────────────────────────
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+function wrapText(text, x, y, maxW, lh) {
+  const words = text.split(' ');
+  let line = '';
+  for (const word of words) {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line.trim(), x, y); line = word + ' '; y += lh;
+    } else { line = test; }
+  }
+  ctx.fillText(line.trim(), x, y);
+}
+
+// ─── GAME LOOP ────────────────────────────────────────────
+let lastTime = 0;
+function loop(time) {
+  const dt = time - lastTime; lastTime = time;
+  if (G.phase !== 'title') { update(); render(); }
+  requestAnimationFrame(loop);
+}
+
+// ─── START GAME ───────────────────────────────────────────
+function startGame() {
+  if (G.phase !== 'title') return;
+  genWorld();
+  G.cam.x = player.x - W/2;
+  G.cam.y = player.y - H/2;
+  G.phase = 'roaming';
+  G.time = 6.0;
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('top-bar').classList.add('visible');
+  setPhase('ROAMING');
+  notify('Welcome to Santo Porto.');
+  notify('Find Old Santo (gold !) for work. Head northwest.');
+  requestAnimationFrame(loop);
+}
+
+// ─── TITLE SCREEN EVENTS ─────────────────────────────────
+document.getElementById('begin-btn').addEventListener('click', startGame);
+
+// ─── TITLE ANIMATION (particles on title screen) ─────────
+function titleRender() {
+  if (G.phase !== 'title') return;
+  // Animate subtle particles on title screen canvas
+  ctx.fillStyle = 'rgba(10,10,15,0.1)';
+  ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 2; i++) {
+    G.particles.push({
+      x: Math.random()*W, y: H+5,
+      vx: (Math.random()-0.5)*0.5, vy: -0.5-Math.random()*1,
+      life: 100+Math.random()*150, maxLife:250, size:1+Math.random(), type:'ember'
+    });
+  }
+  for (let i=G.particles.length-1;i>=0;i--) {
+    const p=G.particles[i]; p.x+=p.vx; p.y+=p.vy; p.life--;
+    if (p.life<=0) { G.particles.splice(i,1); continue; }
+    const a=p.life/p.maxLife;
+    ctx.fillStyle=`rgba(255,${50+Math.random()*50},0,${a*0.5})`;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill();
+  }
+  requestAnimationFrame(titleRender);
+}
+titleRender();
+
+// ═══════════════════════════════════════════════════════════
+// ENHANCED VISUAL SYSTEMS
+// ═══════════════════════════════════════════════════════════
+
+// ─── AMBIENT SOUNDS SIMULATION (visual beat pulses) ───────
+let beatPhase = 0;
+function getBeat() { beatPhase += 0.02; return Math.sin(beatPhase) * 0.5 + 0.5; }
+
+// ─── BLOOD SPLATTER SYSTEM ────────────────────────────────
+const bloodSplatters = [];
+function addBlood(x, y) {
+  for (let i = 0; i < 5; i++) {
+    bloodSplatters.push({
+      x: x + (Math.random()-0.5)*30, y: y + (Math.random()-0.5)*30,
+      size: 3 + Math.random()*8, alpha: 0.8
+    });
+  }
+}
+
+// ─── WEATHER SYSTEM ───────────────────────────────────────
+const WEATHER = { type: 'clear', intensity: 0, timer: 0 };
+function updateWeather() {
+  WEATHER.timer--;
+  if (WEATHER.timer <= 0) {
+    WEATHER.type = Math.random() < 0.3 ? 'rain' : Math.random() < 0.5 ? 'fog' : 'clear';
+    WEATHER.intensity = 0.3 + Math.random() * 0.7;
+    WEATHER.timer = 500 + Math.random() * 1000;
+  }
+}
+
+// ─── FOOTSTEP DUST ────────────────────────────────────────
+function spawnFootstep() {
+  if (!player.moving) return;
+  if (Math.random() > 0.3) return;
+  G.particles.push({
+    x: player.x + (Math.random()-0.5)*6,
+    y: player.y + 12,
+    vx: (Math.random()-0.5)*0.3,
+    vy: -0.2 - Math.random()*0.3,
+    life: 20 + Math.random()*15,
+    maxLife: 35, size: 1 + Math.random()*2, type: 'footdust'
+  });
+}
+
+// ─── CITY MEMORY DISPLAY ──────────────────────────────────
+function drawCityMemory() {
+  if (G.cityMemory.length === 0) return;
+  const px = 10, py = 46, pw = 180;
+  const ph = Math.min(80, 15 + G.cityMemory.length * 12);
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  roundRect(ctx, px, py, pw, ph, 3); ctx.fill();
+  ctx.fillStyle = '#664444'; ctx.font = 'bold 8px monospace';
+  ctx.fillText('CITY MEMORY', px+5, py+11);
+  const recent = G.cityMemory.slice(-4);
+  for (let i = 0; i < recent.length; i++) {
+    ctx.fillStyle = '#886666'; ctx.font = '8px monospace';
+    ctx.fillText(`${recent[i].killer} killed ${recent[i].victim}`, px+5, py+23+i*12);
+  }
+}
+
+// ─── ENHANCED NPC AWARENESS ───────────────────────────────
+function drawNPCAwareness() {
+  for (const npc of npcs) {
+    if (npc.witnessed.length === 0) continue;
+    const d = dist(player.x, player.y, npc.x, npc.y);
+    if (d > 200) continue;
+    // Exclamation if they witnessed a kill
+    ctx.save();
+    ctx.translate(-G.cam.x, -G.cam.y);
+    ctx.fillStyle = 'rgba(255,0,0,0.6)';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠', npc.x, npc.y - 25);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+}
+
+// ─── ADDITIONAL MISSION SYSTEM ────────────────────────────
+const MISSIONS = [
+  { name:'Voss Counting House', x:1900, y:450, desc:'Hit their counting house', faction:'docks' },
+  { name:'Corsini Warehouse', x:600, y:1500, desc:'Raid the Corsini stash', faction:'midtown' },
+  { name:'Neutral Arms Deal', x:2000, y:1600, desc:'Intercept an arms shipment', faction:'furnace' },
+  { name:'Voss Lieutenant', x:2200, y:300, desc:'Take out a Voss officer', faction:'docks' },
+  { name:'Corsini Front', x:400, y:1800, desc:'Burn their money laundering op', faction:'midtown' }
+];
+
+function getNextMission() {
+  const idx = G.missionsDone % MISSIONS.length;
+  return MISSIONS[idx];
+}
+
+// Patch the dialogue system to give varied missions
+const origAdvDlg = advDlg;
+advDlg = function() {
+  if (DLG.typing < DLG.full.length) { DLG.text = DLG.full; DLG.typing = DLG.full.length; return; }
+  DLG.idx++;
+  if (DLG.idx >= DLG.npc.dialogues.length) {
+    closeDlg();
+    if (DLG.npc && DLG.npc.isMission && !G.missionActive) {
+      const m = getNextMission();
+      G.missionActive = true;
+      G.missionTarget = { x: m.x, y: m.y, name: m.name };
+      notify('MISSION: ' + m.desc);
+      notify('Head to ' + m.name + '. Press [E] at target.');
+    }
+    return;
+  }
+  DLG.full = DLG.npc.dialogues[DLG.idx]; DLG.text = ''; DLG.typing = 0;
+};
+
+// ─── SCREEN SHAKE ─────────────────────────────────────────
+let shake = { x: 0, y: 0, intensity: 0 };
+function triggerShake(intensity) { shake.intensity = intensity; }
+function updateShake() {
+  if (shake.intensity > 0) {
+    shake.x = (Math.random()-0.5) * shake.intensity * 2;
+    shake.y = (Math.random()-0.5) * shake.intensity * 2;
+    shake.intensity *= 0.9;
+    if (shake.intensity < 0.1) shake.intensity = 0;
+  } else { shake.x = 0; shake.y = 0; }
+}
+
+// ─── AMBIENT CITY SOUNDS (visual indicators) ──────────────
+const ambientEvents = [];
+function spawnAmbient() {
+  if (Math.random() > 0.005) return;
+  const x = G.cam.x + Math.random() * W;
+  const y = G.cam.y + Math.random() * H;
+  const types = ['siren','shout','car','dog','music'];
+  ambientEvents.push({
+    x, y, type: types[Math.floor(Math.random()*types.length)],
+    life: 60 + Math.random()*40, maxLife: 100
+  });
+}
+
+function drawAmbientEvents() {
+  ctx.save();
+  ctx.translate(-G.cam.x, -G.cam.y);
+  for (let i = ambientEvents.length-1; i >= 0; i--) {
+    const e = ambientEvents[i];
+    e.life--;
+    if (e.life <= 0) { ambientEvents.splice(i, 1); continue; }
+    const a = e.life / e.maxLife;
+    ctx.globalAlpha = a * 0.4;
+    ctx.strokeStyle = e.type === 'siren' ? '#ff0000' : e.type === 'music' ? '#aa44ff' : '#666';
+    ctx.lineWidth = 1;
+    const r = (1-a) * 30;
+    ctx.beginPath(); ctx.arc(e.x, e.y, r, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(e.x, e.y, r*0.6, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+// ─── TERRITORY CONTROL INDICATORS ─────────────────────────
+function drawTerritoryControl() {
+  // Show subtle faction colors on ground based on rep
+  ctx.save();
+  ctx.translate(-G.cam.x, -G.cam.y);
+  for (const d of DISTRICTS) {
+    const faction = G.factions[d.faction];
+    if (!faction) continue;
+    const alpha = faction.rep / 400; // subtle
+    ctx.fillStyle = faction.color;
+    ctx.globalAlpha = alpha;
+    ctx.fillRect(d.x, d.y, d.w, d.h);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ─── LOOT/REWARD SYSTEM ───────────────────────────────────
+let playerMoney = 0;
+function awardLoot() {
+  const amount = 200 + Math.floor(Math.random()*300) + G.missionsDone * 50;
+  playerMoney += amount;
+  notify('Loot: $' + amount + ' (Total: $' + playerMoney + ')');
+}
+
+// Patch combat resolution to award loot
+const origStartCombat = startCombat;
+startCombat = function() {
+  origStartCombat();
+  triggerShake(5);
+  if (COMBAT.enemies.every(e => !e.alive)) awardLoot();
+};
+
+// ─── ENHANCED CHARACTER CUSTOMIZATION ─────────────────────
+const HAIR_STYLES = ['short','mohawk','long','bald','braids'];
+const SKIN_TONES = ['#ddb088','#c49070','#8d5524','#3d2010','#ffe0bd'];
+
+// Assign random traits to crew
+crew.forEach(c => {
+  c.hair = HAIR_STYLES[Math.floor(Math.random()*HAIR_STYLES.length)];
+  c.skin = SKIN_TONES[Math.floor(Math.random()*SKIN_TONES.length)];
+});
+
+// ─── GRAFFITI SYSTEM ──────────────────────────────────────
+const graffiti = [];
+function genGraffiti() {
+  const tags = ['HEIRS','VOSS DIES','NARROWS 4EVR','RIP','SANTO','NO COP ZONE','☠','★★★'];
+  for (const b of buildings) {
+    if (Math.random() < 0.15) {
+      graffiti.push({
+        x: b.x + Math.random()*b.w*0.5,
+        y: b.y + b.h - 15,
+        text: tags[Math.floor(Math.random()*tags.length)],
+        color: ['#ff4444','#44ff44','#ffff44','#ff88ff','#44ffff'][Math.floor(Math.random()*5)]
+      });
+    }
+  }
+}
+
+// ─── TRASH / DEBRIS ───────────────────────────────────────
+const debris = [];
+function genDebris() {
+  for (let i = 0; i < 80; i++) {
+    debris.push({
+      x: Math.random() * WORLD_W,
+      y: Math.random() * WORLD_H,
+      type: Math.random() < 0.5 ? 'paper' : 'can',
+      rot: Math.random() * Math.PI * 2,
+      size: 2 + Math.random()*3
+    });
+  }
+}
+
+// ─── DUMPSTERS & PROPS ────────────────────────────────────
+const props = [];
+function genProps() {
+  for (const b of buildings) {
+    if (Math.random() < 0.3) {
+      props.push({ x: b.x + b.w + 5, y: b.y + b.h - 15, type: 'dumpster' });
+    }
+    if (Math.random() < 0.2) {
+      props.push({ x: b.x - 12, y: b.y + Math.random()*b.h, type: 'hydrant' });
+    }
+    if (Math.random() < 0.15) {
+      props.push({ x: b.x + b.w + 8, y: b.y + Math.random()*b.h, type: 'trashcan' });
+    }
+  }
+}
+
+// Add to world gen
+const origGenWorld = genWorld;
+genWorld = function() {
+  origGenWorld();
+  genGraffiti();
+  genDebris();
+  genProps();
+};
+
+// ─── DRAW PROPS ───────────────────────────────────────────
+function drawProps() {
+  for (const p of props) {
+    const sx = p.x - G.cam.x, sy = p.y - G.cam.y;
+    if (sx < -30 || sx > W+30 || sy < -30 || sy > H+30) continue;
+    if (p.type === 'dumpster') {
+      ctx.fillStyle = '#2a4a2a'; ctx.fillRect(p.x, p.y, 18, 12);
+      ctx.fillStyle = '#1a3a1a'; ctx.fillRect(p.x, p.y, 18, 3);
+    } else if (p.type === 'hydrant') {
+      ctx.fillStyle = '#cc3333'; ctx.fillRect(p.x, p.y, 5, 8);
+      ctx.fillStyle = '#aa2222'; ctx.fillRect(p.x-1, p.y+2, 7, 3);
+    } else if (p.type === 'trashcan') {
+      ctx.fillStyle = '#444'; ctx.fillRect(p.x, p.y, 6, 8);
+      ctx.fillStyle = '#555'; ctx.fillRect(p.x-1, p.y, 8, 2);
+    }
+  }
+}
+
+// ─── DRAW GRAFFITI ────────────────────────────────────────
+function drawGraffiti() {
+  for (const g of graffiti) {
+    const sx = g.x - G.cam.x, sy = g.y - G.cam.y;
+    if (sx < -50 || sx > W+50 || sy < -20 || sy > H+20) continue;
+    ctx.fillStyle = g.color;
+    ctx.globalAlpha = 0.6;
+    ctx.font = 'bold 8px monospace';
+    ctx.fillText(g.text, g.x, g.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ─── DRAW DEBRIS ──────────────────────────────────────────
+function drawDebris() {
+  for (const d of debris) {
+    const sx = d.x - G.cam.x, sy = d.y - G.cam.y;
+    if (sx < -10 || sx > W+10 || sy < -10 || sy > H+10) continue;
+    ctx.fillStyle = d.type === 'paper' ? 'rgba(200,200,180,0.3)' : 'rgba(150,150,150,0.3)';
+    ctx.beginPath(); ctx.arc(d.x, d.y, d.size, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+// ─── PATCH RENDER TO INCLUDE NEW SYSTEMS ──────────────────
+const baseRender = render;
+render = function() {
+  updateShake();
+  updateWeather();
+  spawnFootstep();
+  spawnAmbient();
+  
+  // Apply shake to camera temporarily
+  const origCamX = G.cam.x, origCamY = G.cam.y;
+  G.cam.x += shake.x;
+  G.cam.y += shake.y;
+  
+  baseRender();
+  
+  // Restore camera
+  G.cam.x = origCamX;
+  G.cam.y = origCamY;
+  
+  // Additional overlays
+  drawAmbientEvents();
+  drawCityMemory();
+  
+  // Weather overlay
+  if (WEATHER.type === 'fog') {
+    ctx.fillStyle = `rgba(150,150,170,${WEATHER.intensity * 0.15})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+  
+  // Money display
+  if (playerMoney > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    roundRect(ctx, W-185, H-130, 170, 20, 3); ctx.fill();
+    ctx.fillStyle = '#44cc44'; ctx.font = 'bold 10px monospace';
+    ctx.fillText('$ ' + playerMoney, W-175, H-116);
+  }
+};
+
+// ─── ENHANCED DRAW SPRITE WITH SKIN/HAIR ──────────────────
+const origDrawSprite = drawSprite;
+drawSprite = function(x, y, color, isPlayer, frame) {
+  const walk = isPlayer && player.moving ? Math.sin(frame*Math.PI/2)*3 : 0;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath(); ctx.ellipse(x, y+15, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+  // Shoes
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(x-4, y+11+walk, 4, 3);
+  ctx.fillRect(x+1, y+11-walk, 4, 3);
+  // Legs (pants)
+  ctx.fillStyle = '#222233';
+  ctx.fillRect(x-4, y+4, 3, 8+walk);
+  ctx.fillRect(x+1, y+4, 3, 8-walk);
+  // Body/jacket
+  const jGrad = ctx.createLinearGradient(x-6, y-7, x+6, y+7);
+  jGrad.addColorStop(0, lighten(color, 10)); jGrad.addColorStop(1, darken(color, 20));
+  ctx.fillStyle = jGrad;
+  ctx.fillRect(x-6, y-7, 12, 13);
+  // Collar
+  ctx.fillStyle = darken(color, 30);
+  ctx.fillRect(x-3, y-7, 6, 3);
+  // Jacket zipper/detail
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(x-0.5, y-4, 1, 10);
+  // Arms
+  ctx.fillStyle = color;
+  const armSwing = isPlayer && player.moving ? Math.sin(frame*Math.PI/2)*2 : 0;
+  ctx.fillRect(x-8, y-5+armSwing, 3, 10);
+  ctx.fillRect(x+5, y-5-armSwing, 3, 10);
+  // Hands
+  ctx.fillStyle = '#ddb088';
+  ctx.fillRect(x-8, y+4+armSwing, 3, 3);
+  ctx.fillRect(x+5, y+4-armSwing, 3, 3);
+  // Head
+  ctx.fillStyle = '#ddb088';
+  ctx.beginPath(); ctx.arc(x, y-12, 6, 0, Math.PI*2); ctx.fill();
+  // Hair
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.ellipse(x, y-15, 5, 4, 0, Math.PI*0.9, Math.PI*2.1); ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x-3, y-13, 2, 2);
+  ctx.fillRect(x+1, y-13, 2, 2);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x-2, y-13, 1, 2);
+  ctx.fillRect(x+2, y-13, 1, 2);
+  // Player glow effect
+  if (isPlayer) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.shadowColor = color; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.ellipse(x, y+15, 11, 5, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+};
+
+// ─── INTEGRATE PROPS INTO WORLD RENDERING ─────────────────
+// We'll inject prop/graffiti/debris drawing into the render by wrapping
+const finalRender = render;
+render = function() {
+  finalRender();
+  
+  // Draw world-space props (need camera transform)
+  ctx.save();
+  ctx.translate(Math.round(-G.cam.x - shake.x), Math.round(-G.cam.y - shake.y));
+  drawDebris();
+  drawProps();
+  drawGraffiti();
+  ctx.restore();
+};
+
+// ─── COMPASS / DIRECTION INDICATOR ────────────────────────
+function drawCompass() {
+  if (!G.missionActive || !G.missionTarget) return;
+  const ang = Math.atan2(G.missionTarget.y - player.y, G.missionTarget.x - player.x);
+  const d = dist(player.x, player.y, G.missionTarget.x, G.missionTarget.y);
+  if (d < 150) return;
+  
+  const cx = W/2, cy = 65;
+  const r = 15;
+  const px = cx + Math.cos(ang) * r;
+  const py = cy + Math.sin(ang) * r;
+  
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); ctx.arc(cx, cy, r+5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#ff3333'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, r+5, 0, Math.PI*2); ctx.stroke();
+  
+  ctx.fillStyle = '#ff4444';
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px - Math.cos(ang-0.5)*6, py - Math.sin(ang-0.5)*6);
+  ctx.lineTo(px - Math.cos(ang+0.5)*6, py - Math.sin(ang+0.5)*6);
+  ctx.fill();
+  
+  ctx.fillStyle = '#888'; ctx.font = '7px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(Math.round(d)+'m', cx, cy+r+14);
+  ctx.textAlign = 'left';
+}
+
+// Add compass to final render
+const compassRender = render;
+render = function() { compassRender(); drawCompass(); };
+
+// ─── FPS COUNTER (debug) ──────────────────────────────────
+let fpsFrames = 0, fpsLast = performance.now(), fpsDisplay = 0;
+function drawFPS() {
+  fpsFrames++;
+  const now = performance.now();
+  if (now - fpsLast > 1000) { fpsDisplay = fpsFrames; fpsFrames = 0; fpsLast = now; }
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '9px monospace';
+  ctx.fillText(fpsDisplay + ' FPS', W-50, H-5);
+}
+const fpsRender = render;
+render = function() { fpsRender(); drawFPS(); };
+
+// ─── PARALLAX BACKGROUND STARS (for night) ────────────────
+const bgStars = [];
+for (let i = 0; i < 60; i++) {
+  bgStars.push({ x: Math.random(), y: Math.random(), size: 0.5+Math.random()*1.5, twinkle: Math.random()*Math.PI*2 });
+}
+
+// ─── ENHANCED TITLE SCREEN ───────────────────────────────
+// Add blood drip effect to title
+let titleDrips = [];
+function updateTitleDrips() {
+  if (G.phase !== 'title') return;
+  if (Math.random() < 0.05) {
+    titleDrips.push({ x: W*0.3 + Math.random()*W*0.4, y: H*0.3, vy: 0.5+Math.random()*2, life: 200 });
+  }
+  for (let i = titleDrips.length-1; i >= 0; i--) {
+    titleDrips[i].y += titleDrips[i].vy;
+    titleDrips[i].life--;
+    if (titleDrips[i].life <= 0 || titleDrips[i].y > H) titleDrips.splice(i, 1);
+  }
+}
+
+// Override title render to include drips
+const origTitleRender = titleRender;
+
+// ─── GAME READY ───────────────────────────────────────────
+console.log('HEIRS - Santo Porto loaded. Click BEGIN to start.');
+</script>
 </html>
