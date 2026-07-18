@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEIRS — You Don't Play One Criminal. You Play A Family.</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { 
+  width: 100%; height: 100%; overflow: hidden;
+  background: #0a0a0f; font-family: 'Courier New', monospace;
+  color: #e0ddd4;
+}
+
+#game-container {
+  width: 100%; height: 100%; position: relative;
+}
+
+canvas#game-canvas {
+  width: 100%; height: 100%; display: block;
+  image-rendering: pixelated;
+}
+
+/* ═══════════ HUD OVERLAYS ═══════════ */
+
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+}
+
+#hud > * { pointer-events: auto; }
+
+/* Top bar - district name, time, phase */
+#top-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(10,10,15,0.9) 0%, transparent 100%);
+}
+
+#district-name {
+  font-size: 14px; text-transform: uppercase; letter-spacing: 3px;
+  color: #8a8575; font-weight: bold;
+}
+
+#world-time {
+  font-size: 12px; color: #6a6560; letter-spacing: 1px;
+}
+
+#game-phase {
+  font-size: 11px; padding: 4px 12px; border-radius: 2px;
+  background: rgba(180, 140, 60, 0.3); color: #d4a843;
+  text-transform: uppercase; letter-spacing: 2px;
+}
+
+/* Crew panel - left side */
+#crew-panel {
+  position: absolute; top: 60px; left: 12px;
+  width: 200px;
+}
+
+.crew-member-card {
+  background: rgba(15, 15, 20, 0.85);
+  border: 1px solid rgba(100, 90, 70, 0.4);
+  border-radius: 3px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.crew-member-card.active {
+  border-color: #d4a843;
+  background: rgba(30, 25, 15, 0.9);
+}
+
+.crew-member-card.dead {
+  opacity: 0.4;
+  border-color: #4a1515;
+}
+
+.crew-member-card .name {
+  font-size: 12px; font-weight: bold; color: #e0ddd4;
+}
+
+.crew-member-card .role {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+  color: #8a7a55; margin-top: 2px;
+}
+
+.crew-member-card .health-bar {
+  width: 100%; height: 3px; background: rgba(60, 50, 40, 0.5);
+  margin-top: 5px; border-radius: 1px; overflow: hidden;
+}
+
+.crew-member-card .health-fill {
+  height: 100%; background: #5a8a4a; transition: width 0.5s ease;
+}
+
+.crew-member-card .health-fill.critical {
+  background: #8a3030;
+}
+
+/* Bottom notification area */
+#notification-area {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  text-align: center; max-width: 600px; width: 90%;
+}
+
+.notification {
+  background: rgba(10, 10, 15, 0.9);
+  border: 1px solid rgba(100, 90, 70, 0.3);
+  padding: 10px 20px; margin-top: 6px;
+  border-radius: 3px; font-size: 13px;
+  animation: notif-in 0.3s ease;
+  color: #c0baa8;
+}
+
+.notification.critical {
+  border-color: #8a3030;
+  color: #e06050;
+}
+
+.notification.success {
+  border-color: #3a6a3a;
+  color: #6ab06a;
+}
+
+@keyframes notif-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Interaction prompt */
+#interact-prompt {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  font-size: 12px; color: #8a8575; letter-spacing: 1px;
+  background: rgba(10, 10, 15, 0.8); padding: 6px 16px;
+  border: 1px solid rgba(100, 90, 70, 0.3); border-radius: 2px;
+  display: none;
+}
+
+/* Combat planning overlay */
+#planning-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(5, 5, 10, 0.92);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 100;
+}
+
+#planning-overlay.active { display: flex; }
+
+#planning-title {
+  font-size: 24px; color: #d4a843; letter-spacing: 6px;
+  text-transform: uppercase; margin-bottom: 30px;
+}
+
+#planning-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; max-width: 800px; width: 90%;
+}
+
+.loadout-card {
+  background: rgba(20, 18, 15, 0.9);
+  border: 1px solid rgba(100, 90, 70, 0.4);
+  border-radius: 4px; padding: 16px;
+  cursor: pointer; transition: all 0.2s ease;
+}
+
+.loadout-card:hover {
+  border-color: #d4a843;
+  transform: translateY(-2px);
+}
+
+.loadout-card .member-name {
+  font-size: 14px; font-weight: bold; margin-bottom: 8px; color: #e0ddd4;
+}
+
+.loadout-card select, .loadout-card input {
+  width: 100%; margin: 4px 0; padding: 4px 8px;
+  background: rgba(30, 28, 22, 0.9); border: 1px solid rgba(80, 70, 50, 0.5);
+  color: #c0baa8; font-family: inherit; font-size: 11px;
+  border-radius: 2px;
+}
+
+#lock-orders-btn {
+  margin-top: 30px; padding: 14px 40px;
+  background: rgba(180, 120, 40, 0.3); border: 2px solid #d4a843;
+  color: #d4a843; font-size: 14px; font-family: inherit;
+  text-transform: uppercase; letter-spacing: 4px;
+  cursor: pointer; transition: all 0.2s ease; border-radius: 3px;
+}
+
+#lock-orders-btn:hover {
+  background: rgba(180, 120, 40, 0.5);
+  transform: scale(1.02);
+}
+
+/* Succession overlay */
+#succession-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(5, 0, 0, 0.95);
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 200;
+}
+
+#succession-overlay.active { display: flex; }
+
+#succession-overlay .fallen-name {
+  font-size: 32px; color: #8a3030; letter-spacing: 4px;
+  margin-bottom: 10px;
+}
+
+#succession-overlay .fallen-epitaph {
+  font-size: 14px; color: #6a5a4a; margin-bottom: 40px;
+  font-style: italic;
+}
+
+#succession-overlay .successor-label {
+  font-size: 11px; color: #6a6560; text-transform: uppercase;
+  letter-spacing: 3px; margin-bottom: 8px;
+}
+
+#succession-overlay .successor-name {
+  font-size: 24px; color: #d4a843; letter-spacing: 2px;
+  margin-bottom: 30px;
+}
+
+#succession-overlay .continue-btn {
+  padding: 12px 30px; background: transparent;
+  border: 1px solid rgba(100, 90, 70, 0.5);
+  color: #8a8575; font-family: inherit; font-size: 12px;
+  text-transform: uppercase; letter-spacing: 2px;
+  cursor: pointer; transition: all 0.3s ease;
+}
+
+#succession-overlay .continue-btn:hover {
+  border-color: #d4a843; color: #d4a843;
+}
+
+/* Title screen */
+#title-screen {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: #0a0a0f;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 300;
+}
+
+#title-screen h1 {
+  font-size: 72px; color: #d4a843; letter-spacing: 20px;
+  font-weight: normal; margin-bottom: 15px;
+}
+
+#title-screen .subtitle {
+  font-size: 13px; color: #6a6560; letter-spacing: 2px;
+  margin-bottom: 50px; text-align: center; line-height: 1.8;
+  max-width: 400px;
+}
+
+#title-screen .start-btn {
+  padding: 14px 40px; background: transparent;
+  border: 1px solid rgba(180, 140, 60, 0.5);
+  color: #d4a843; font-family: inherit; font-size: 13px;
+  text-transform: uppercase; letter-spacing: 4px;
+  cursor: pointer; transition: all 0.3s ease;
+}
+
+#title-screen .start-btn:hover {
+  background: rgba(180, 140, 60, 0.15);
+  border-color: #d4a843;
+}
+
+/* Dialogue box */
+#dialogue-box {
+  position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+  width: 500px; max-width: 90%;
+  background: rgba(10, 10, 15, 0.95);
+  border: 1px solid rgba(100, 90, 70, 0.5);
+  border-radius: 4px; padding: 16px 20px;
+  display: none; z-index: 50;
+}
+
+#dialogue-box.active { display: block; }
+
+#dialogue-speaker {
+  font-size: 11px; color: #d4a843; text-transform: uppercase;
+  letter-spacing: 2px; margin-bottom: 6px;
+}
+
+#dialogue-text {
+  font-size: 13px; color: #c0baa8; line-height: 1.6;
+}
+
+#dialogue-continue {
+  font-size: 10px; color: #6a6560; margin-top: 10px;
+  text-align: right;
+}
+
+/* Minimap */
+#minimap {
+  position: absolute; top: 60px; right: 12px;
+  width: 150px; height: 150px;
+  background: rgba(15, 15, 20, 0.85);
+  border: 1px solid rgba(100, 90, 70, 0.4);
+  border-radius: 3px; overflow: hidden;
+}
+
+#minimap canvas {
+  width: 100%; height: 100%;
+}
+
+/* Rep tracker */
+#rep-panel {
+  position: absolute; top: 220px; right: 12px;
+  width: 150px;
+}
+
+.rep-entry {
+  font-size: 10px; margin-bottom: 4px;
+  padding: 4px 8px;
+  background: rgba(15, 15, 20, 0.7);
+  border-radius: 2px;
+}
+
+.rep-entry .faction-name { color: #8a8575; }
+.rep-entry .rep-value { float: right; }
+.rep-value.positive { color: #6ab06a; }
+.rep-value.negative { color: #c05040; }
+.rep-value.neutral { color: #6a6560; }
+</style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game-canvas"></canvas>
+  
+  <div id="hud">
+    <div id="top-bar">
+      <div id="district-name">THE NARROWS</div>
+      <div id="game-phase">ROAMING</div>
+      <div id="world-time">21:45 — NIGHT</div>
+    </div>
+    
+    <div id="crew-panel"></div>
+    
+    <div id="minimap"><canvas id="minimap-canvas" width="150" height="150"></canvas></div>
+    <div id="rep-panel"></div>
+    
+    <div id="interact-prompt">[E] Talk</div>
+    <div id="notification-area"></div>
+    
+    <div id="dialogue-box">
+      <div id="dialogue-speaker">MARCO</div>
+      <div id="dialogue-text">You new around here? This block belongs to the Voss family.</div>
+      <div id="dialogue-continue">[ SPACE to continue ]</div>
+    </div>
+  </div>
+  
+  <div id="planning-overlay">
+    <div id="planning-title">LOCK IN ORDERS</div>
+    <div id="planning-grid"></div>
+    <button id="lock-orders-btn">COMMIT — NO TURNING BACK</button>
+  </div>
+  
+  <div id="succession-overlay">
+    <div class="fallen-name"></div>
+    <div class="fallen-epitaph"></div>
+    <div class="successor-label">CONTROL PASSES TO</div>
+    <div class="successor-name"></div>
+    <button class="continue-btn">CARRY THE NAME FORWARD</button>
+  </div>
+  
+  <div id="title-screen">
+    <h1>HEIRS</h1>
+    <div class="subtitle">
+      You don't play one criminal in this city.<br>
+      You play a family.<br><br>
+      Every job might cost you the one you were controlling.
+    </div>
+    <button class="start-btn">BEGIN</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
